@@ -21,22 +21,6 @@ public class ControllerEditor : Editor
         controller.Avatar = controller.gameObject;
     }
 
-    GUIStyle GetBtnStyle()
-    {
-        // Color[] pix = new Color[] { Color.white };
-        // Texture2D result = new Texture2D(1, 1);
-        // result.SetPixels(pix);
-        // result.Apply();
-        // s.normal.background = result;
-        var s = new GUIStyle(GUI.skin.label)
-        {
-            fontSize = 12,
-            alignment = TextAnchor.MiddleCenter,
-            margin = new RectOffset(0, 0, 0, 0)
-        };
-        return s;
-    }
-
     bool DrawRemoveButton()
     {
         return GUILayout.Button("x", new GUIStyle(GUI.skin.label)
@@ -69,6 +53,11 @@ public class ControllerEditor : Editor
         using (Style.Horizontal())
         {
             controller.Avatar = (GameObject)EditorGUILayout.ObjectField("Target Avatar", controller.Avatar, typeof(GameObject), true);
+        }
+        using (Style.Horizontal())
+        using (Style.Box())
+        {
+            EditorGUILayout.LabelField($"Bones: 1");
         }
 
         Style.Line(1);
@@ -103,6 +92,7 @@ public class ControllerEditor : Editor
 
                 // Self implemented indent
                 using (Style.Indent())
+                using (Style.Box())
                 {
                     // anything you do in here will be indented by 20 pixels
                     // relative to stuff outside the top using( xxx) scope
@@ -119,7 +109,6 @@ public class ControllerEditor : Editor
                             break;
                     }
 
-                    var i = 1;
                     EditorGUILayout.LabelField($"Bones ({currentController.Bones.Count})", EditorStyles.boldLabel);
                     foreach (var bone in currentController.Bones.ToArray())
                     {
@@ -449,15 +438,21 @@ public class Style
         return Disposable.Create(() => EditorGUIUtility.labelWidth = oldValue);
     }
 
+    public static IDisposable Box()
+    {
+        return new GUILayout.VerticalScope(new GUIStyle(EditorStyles.helpBox));
+    }
+
     public static IDisposable Indent()
     {
         var cHorizontalScope = new GUILayout.HorizontalScope();
         GUILayout.Space(20f);
-        var cVerticalScope = new GUILayout.VerticalScope(new GUIStyle()
-        {
-            border = new RectOffset(1, 1, 1, 1),
-           
-        });
+
+        Color[] pix = new Color[] { Color.white };
+        Texture2D result = new Texture2D(1, 1);
+        result.SetPixels(pix);
+        result.Apply();
+        var cVerticalScope = new GUILayout.VerticalScope();
         return Disposable.Create(() =>
         {
             cVerticalScope.Dispose();
