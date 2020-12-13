@@ -6,23 +6,45 @@ using System.Collections.Generic;
 using System;
 using System.Linq;
 
-[CustomEditor(typeof(ControllerPart))]
-[CanEditMultipleObjects]
-public class ControllerPartEditor : Editor
+namespace Cubeage
 {
-    void OnEnable()
+    [CustomEditor(typeof(ControllerPart))]
+    [CanEditMultipleObjects]
+    public class ControllerPartEditor : Editor
     {
+        ControllerPart Part;
 
-    }
-
-    public override void OnInspectorGUI()
-    {
-        var rect = GUILayoutUtility.GetRect(EditorGUIUtility.currentViewWidth, EditorGUIUtility.singleLineHeight);
-        EditorGUI.DrawRect(rect, new Color(1f, 1f, 0.8f));
-        EditorGUI.LabelField(rect, "Done", new GUIStyle()
+        void OnEnable()
         {
-            alignment = TextAnchor.MiddleCenter,
-            fontStyle = FontStyle.Bold,
-        });
+            Part = (ControllerPart) target;
+        }
+
+
+        public override void OnInspectorGUI()
+        {
+            using (Layout.Box())
+            {
+                EditorGUILayout.LabelField("Done", new GUIStyle()
+                {
+                    alignment = TextAnchor.MiddleCenter,
+                    fontStyle = FontStyle.Bold
+                });
+                // foreach(var property in Part.Properties)
+                // {
+                //     EditorGUILayout.LabelField(property.Key.ToString());
+                //     using (Layout.Indent())
+                //     {
+                //         EditorGUILayout.LabelField($"Max: {property.Value.Max}");
+                //         EditorGUILayout.LabelField($"Min: {property.Value.Max}");
+                //         EditorGUILayout.LabelField($"Available: {property.Value.IsAvailable()}");
+                //         EditorGUILayout.LabelField($"Controller: {property.Value.ControllerId}");
+                //         if (!property.Value.IsAvailable())
+                //         {
+                //             EditorGUILayout.LabelField($"Controller: {property.Value.ControllerId}");
+                //         }
+                //     }
+                // }
+            }
+        }
     }
 }

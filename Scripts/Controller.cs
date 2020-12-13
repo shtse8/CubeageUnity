@@ -6,166 +6,125 @@ using UnityEditorInternal;
 using System;
 using System.Linq;
 
-public class Controller : MonoBehaviour
+
+namespace Cubeage
 {
-    public GameObject Avatar;
-    public List<BoneController> Controllers = new List<BoneController>();
-
-
-    // Start is called before the first frame update
-    void Start()
+    public class Controller : MonoBehaviour
     {
-    }
+        [SerializeReference] public GameObject Avatar;
+        [SerializeReference] public List<BoneController> BoneControllers = new List<BoneController>();
 
-    // Update is called once per frame
-    void Update()
-    {
-    }
-
-}
-
-[Serializable]
-public class BoneController
-{
-    public string Name = "";
-    public List<Bone> Bones = new List<Bone>();
-    public bool isExpanded = false;
-    public float Value = 50;
-    public float DefaultValue = 50;
-    public Mode Mode = Mode.View;
-
-    public void Update()
-    {
-        var ratio = Value / 100;
-        foreach (var bone in Bones)
+        void Reset()
         {
-            foreach (var dict in bone.BoneProperties)
-            {
-                var property = dict.Key;
-                var boneProperty = dict.Value;
-                if (!boneProperty.isEnabled)
-                    continue;
+            Avatar = gameObject;
+        }
 
-                float value = boneProperty.Min + (boneProperty.Max - boneProperty.Min) * ratio;
-                bone.Part.transform.Set(property, value);
+        public void AddController()
+        {
+            BoneControllers.Add(new BoneController(this, $"Controller {BoneControllers.Count + 1}"));
+        }
+
+    }
+
+    [Serializable]
+    public class BoneController 
+    {
+        public SerializableGuid Id = SerializableGuid.NewGuid();
+        [SerializeReference] public Controller Controller;
+        public string Name = "";
+        [SerializeReference] public List<Bone> Bones = new List<Bone>();
+        public bool isExpanded = false;
+        public float Value = 50;
+        public float DefaultValue = 50;
+        public Mode Mode = Mode.View;
+
+        public BoneController(Controller controller, string name)
+        {
+            Controller = controller;
+            Name = name;
+            Debug.Log(Id);
+        }
+
+        public void Update()
+        {
+            var ratio = Value / 100;
+            foreach (var bone in Bones)
+            {
+                foreach ((var property, var boneProperty) in bone.Properties.Where(x => x.Value.IsEnabled))
+                {
+                    float value = boneProperty.Min + (boneProperty.Max - boneProperty.Min) * ratio;
+                    bone.Transform(property, value);
+                }
             }
         }
-    }
-}
-
-[Serializable]
-public class BonePropertiesDictionary : SerializableDictionary<Properties, BoneProperty> { }
-
-[Serializable]
-public class Bone
-{
-    public ControllerPart Part;
-    public BonePropertiesDictionary BoneProperties = new BonePropertiesDictionary();
-    public bool isExpanded = false;
-
-    public Bone(ControllerPart part)
-    {
-        Part = part;
-        foreach(var property in typeof(Properties).GetValues<Properties>().ToList())
+        public void Add(Bone bone)
         {
-            var value = part.transform.Select(property);
-            var boneProperty = new BoneProperty
+            // Check Controller Part within the avatar
+            if (!Controller.Avatar.GetComponentsInChildren<ControllerPart>().Contains(bone.Part))
             {
-                Min = value,
-                Max = value
-            };
-            BoneProperties.Add(property, boneProperty);
+                throw new Exception("This part doesn't belong to this avatar.");
+            }
+            // check duplicated part in the controller
+            else if (Bones.Select(x => x.Part).Contains(bone.Part))
+            {
+                throw new Exception("Duplicated part.");
+            }
+            else
+            {
+                Bones.Add(bone);
+            }
         }
-    }
-}
-
-[Serializable]
-public class BoneProperty
-{
-    public bool isEnabled = false;
-    public float Min;
-    public float Max;
-}
 
 
-public enum Properties
-{
-    PositionX,
-    PositionY,
-    PositionZ,
-    ScaleX,
-    ScaleY,
-    ScaleZ
-}
-
-public enum Mode
-{
-    View,
-    Min,
-    Max
-}
-
-public static class TransformExtensions
-{
-    public static float Select(this Transform transform, Properties property)
-    {
-        switch (property)
+        public void Add(ControllerPart part)
         {
-            case Properties.PositionX:
-                return transform.localPosition.x;
-            case Properties.PositionY:
-                return transform.localPosition.y;
-            case Properties.PositionZ:
-                return transform.localPosition.z;
-            case Properties.ScaleX:
-                return transform.localScale.x;
-            case Properties.ScaleY:
-                return transform.localScale.y;
-            case Properties.ScaleZ:
-                return transform.localScale.z;
+            Add(new Bone(this, part));
         }
-        return 0;
-    }
 
-    public static void Set(this Transform transform, Properties property, float value)
-    {
-        switch (property)
+        public void Remove(Bone bone)
         {
-            case Properties.PositionX:
-                transform.localPosition = transform.localPosition.SetX(value);
-                break;
-            case Properties.PositionY:
-                transform.localPosition = transform.localPosition.SetY(value);
-                break;
-            case Properties.PositionZ:
-                transform.localPosition = transform.localPosition.SetZ(value);
-                break;
-            case Properties.ScaleX:
-                transform.localScale = transform.localScale.SetX(value);
-                break;
-            case Properties.ScaleY:
-                transform.localScale = transform.localScale.SetY(value);
-                break;
-            case Properties.ScaleZ:
-                transform.localScale = transform.localScale.SetZ(value);
-                break;
+            Bones.Remove(bone);
+        }
+
+    }
+
+    [Serializable]
+    public struct SerializableGuid : IEquatable<SerializableGuid>
+    {
+        public static SerializableGuid Empty = new SerializableGuid(Guid.Empty);
+
+        public string value;
+        // [SerializeField]
+        // public byte[] values;
+
+        public SerializableGuid(Guid guid)
+        {
+            // values = guid.ToByteArray();
+            value = guid.ToString();
+        }
+
+        public bool Equals(SerializableGuid other)
+        {
+            // return values.SequenceEqual(other.values);
+            return value.Equals(other.value);
+        }
+
+        public static SerializableGuid NewGuid()
+        {
+            return new SerializableGuid(Guid.NewGuid());
+        }
+
+        public override string ToString() {
+            // return new Guid(values).ToString();
+            return value;
         }
     }
 
-    public static Vector3 SetX(this Vector3 vector, float value)
+    public enum Mode
     {
-        vector.x = value;
-        return vector;
-    }
-    public static Vector3 SetY(this Vector3 vector, float value)
-    {
-        vector.y = value;
-        return vector;
-    }
-    public static Vector3 SetZ(this Vector3 vector, float value)
-    {
-        vector.z = value;
-        return vector;
+        View,
+        Min,
+        Max
     }
 
 }
