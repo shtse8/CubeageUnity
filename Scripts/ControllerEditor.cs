@@ -76,28 +76,23 @@ namespace Cubeage
             {
                 MyWindow.Init();
             }
-            /*
-            if (!EditorGUIUtility.wideMode)
-            {
-                EditorGUIUtility.wideMode = true;
-                EditorGUIUtility.labelWidth = EditorGUIUtility.currentViewWidth - 212;
-            }
-            */
-
-            // EditorGUI.BeginChangeCheck();
-            // serializedObject.Update();
-
             using (Layout.Horizontal())
             {
                 Layout.Object(controller, x => x.Avatar, "Target Avatar", new ActionRecord(controller, "Set Avatar"));
-                // controller.Avatar = (GameObject)EditorGUILayout.ObjectField("Target Avatar", controller.Avatar, typeof(GameObject), true);
             }
-            // using (Layout.Horizontal())
-            // using (Layout.Box())
-            // {
-            //     EditorGUILayout.LabelField($"Bones: 1");
-            // }
 
+            using (Layout.Toolbar())
+            {
+                if (Layout.ToolbarButton("Add"))
+                {
+                    controller.AddController();
+                }
+                if (Layout.ToolbarButton("Reset"))
+                {
+                }
+                Layout.FlexibleSpace();
+            }
+            
             Layout.Line(1);
 
             foreach (var currentController in controller.BoneControllers.ToArray())
@@ -132,10 +127,7 @@ namespace Cubeage
                     using (Layout.Indent())
                     using (Layout.Box())
                     {
-                        // anything you do in here will be indented by 20 pixels
-                        // relative to stuff outside the top using( xxx) scope
-
-                        currentController.Mode = GUILayout.Toolbar(currentController.Mode.GetValue(), typeof(Mode).GetValues<Mode>().Select(x => x.ToString()).ToArray()).ToEnum<Mode>();
+                        currentController.Mode = GUILayout.Toolbar(currentController.Mode.GetValue(), EnumHelper.GetValues<Mode>().Select(x => x.ToString()).ToArray()).ToEnum<Mode>();
 
                         switch (currentController.Mode)
                         {
@@ -147,7 +139,7 @@ namespace Cubeage
                                 break;
                         }
 
-                        EditorGUILayout.LabelField($"Bones ({currentController.Bones.Count})", EditorStyles.boldLabel);
+                        Layout.Label($"Bones ({currentController.Bones.Count})", EditorStyles.boldLabel);
                         foreach (var bone in currentController.Bones.ToArray())
                         {
                             using (Layout.Horizontal())
@@ -193,6 +185,17 @@ namespace Cubeage
                                             DrawTransformController(currentController, bone, Properties.PositionX, currentController.Mode);
                                             DrawTransformController(currentController, bone, Properties.PositionY, currentController.Mode);
                                             DrawTransformController(currentController, bone, Properties.PositionZ, currentController.Mode);
+                                        }
+                                    }
+
+                                    using (Layout.Horizontal())
+                                    {
+                                        EditorGUILayout.LabelField("Rotation", GUILayout.MinWidth(50));
+                                        using (Layout.SetLabelWidth(10))
+                                        {
+                                            DrawTransformController(currentController, bone, Properties.RotationX, currentController.Mode);
+                                            DrawTransformController(currentController, bone, Properties.RotationY, currentController.Mode);
+                                            DrawTransformController(currentController, bone, Properties.RotationZ, currentController.Mode);
                                         }
                                     }
 
@@ -248,14 +251,6 @@ namespace Cubeage
                 }
             }
 
-            using (Layout.Horizontal())
-            {
-                Layout.FlexibleSpace();
-                if (Layout.Button("+"))
-                {
-                    controller.AddController();
-                }
-            }
         }
 
         /* 
@@ -274,34 +269,18 @@ namespace Cubeage
 
             using (Layout.SetEnable(mode != Mode.View && entry.IsEnabled))
             {
-                var label = "";
-                switch (property)
-                {
-                    case Properties.PositionX:
-                    case Properties.ScaleX:
-                        label = "X";
-                        break;
-                    case Properties.PositionY:
-                    case Properties.ScaleY:
-                        label = "Y";
-                        break;
-                    case Properties.PositionZ:
-                    case Properties.ScaleZ:
-                        label = "Z";
-                        break;
-                }
                 switch (mode)
                 {
                     case Mode.Min:
-                        Layout.Float(entry, x => x.Min, label, new ActionRecord(target, "Change Transform"));
+                        Layout.Float(entry, x => x.Min, property.GetLabel(), new ActionRecord(target, "Change Transform"));
                         bone.Transform(property, entry.Min);
                         break;
                     case Mode.Max:
-                        Layout.Float(entry, x => x.Max, label, new ActionRecord(target, "Change Transform"));
+                        Layout.Float(entry, x => x.Max, property.GetLabel(), new ActionRecord(target, "Change Transform"));
                         bone.Transform(property, entry.Max);
                         break;
                     case Mode.View:
-                        Layout.Float(bone.Transform(property), label);
+                        Layout.Float(bone.Transform(property), property.GetLabel());
                         break;
                 }
             }
@@ -428,15 +407,24 @@ namespace Cubeage
             });
         }
 
+        public static IDisposable Toolbar()
+        {
+            var disposable = new GUILayout.HorizontalScope("Toolbar", GUILayout.ExpandWidth(true));
+            return Disposable.Create(() =>
+            {
+                disposable.Dispose();
+                EditorGUILayout.Space();
+            });
+        }
+
+        public static bool ToolbarButton(string label)
+        {
+            return GUILayout.Button(label, "ToolbarButton");
+        }
+
         public static IDisposable Horizontal()
         {
-            var disposable = new GUILayout.HorizontalScope(new GUIStyle()
-            {
-                wordWrap = true
-            }, new GUILayoutOption[] {
-            GUILayout.MinWidth(0),
-            GUILayout.MaxWidth(EditorGUIUtility.currentViewWidth)
-        });
+            var disposable = new GUILayout.HorizontalScope(GUILayout.ExpandWidth(true));
             return Disposable.Create(() =>
             {
                 disposable.Dispose();
@@ -495,6 +483,11 @@ namespace Cubeage
             GUILayout.FlexibleSpace();
         }
             
+        public static void Label(string label, GUIStyle style)
+        {
+            EditorGUILayout.LabelField(label, style);
+        }
+
         private static void ValueChanged<TTarget, T>(TTarget target, Expression<Func<TTarget, T>> expression, Func<T, T> layoutGenerator, ActionRecord record = null)
         {
             var selector = expression.Compile();

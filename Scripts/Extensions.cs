@@ -30,15 +30,6 @@ namespace Cubeage
                        .Name;
         }
 
-        public static int GetValue<T>(this T value) where T : Enum
-        {
-            return (int)(object)value;
-        }
-
-        public static IList<T> GetValues<T>(this Type enumType)
-        {
-            return Enum.GetValues(enumType).Cast<T>().ToList();
-        }
 
         public static void SetValue<T, TValue>(this T target, Expression<Func<T, TValue>> memberLamda, TValue value)
         {
@@ -57,6 +48,18 @@ namespace Cubeage
                 }
             }
         }
+    }
 
+    public static class EnumHelper
+    {
+        public static int GetValue<T>(this T value) where T : Enum
+        {
+            return (int)(object)value;
+        }
+
+        public static IEnumerable<T> GetValues<T>() where T : Enum
+        {
+            return Enum.GetValues(typeof(T)).Cast<T>();
+        }
     }
 }

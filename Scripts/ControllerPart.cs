@@ -22,7 +22,7 @@ namespace Cubeage
         {
             BoneController = boneController;
             Part = part;
-            foreach (var property in typeof(Properties).GetValues<Properties>().ToArray())
+            foreach (var property in EnumHelper.GetValues<Properties>())
             {
                 var value = Part.transform.Select(property);
                 Properties.Add(property, new Entry(value));
@@ -31,12 +31,14 @@ namespace Cubeage
 
         public void Transform(Properties property, float value)
         {
+            Properties[property].Value = value;
             Part.transform.Set(property, value);
         }
 
         public float Transform(Properties property)
         {
-            return Part.transform.Select(property);
+            return Properties[property].Value;
+            //return Part.transform.Select(property);
         }
 
         public bool IsAvailable(Properties property)
@@ -58,12 +60,14 @@ namespace Cubeage
         public float Min;
         public float Max;
         public float Origin;
+        public float Value;
 
         public Entry(float value)
         {
             Min = value;
             Max = value;
             Origin = value;
+            Value = value;
         }
     }
 
@@ -73,6 +77,9 @@ namespace Cubeage
         PositionX,
         PositionY,
         PositionZ,
+        RotationX,
+        RotationY,
+        RotationZ,
         ScaleX,
         ScaleY,
         ScaleZ
@@ -90,6 +97,12 @@ namespace Cubeage
                     return transform.localPosition.y;
                 case Properties.PositionZ:
                     return transform.localPosition.z;
+                case Properties.RotationX:
+                    return transform.localEulerAngles.x;
+                case Properties.RotationY:
+                    return transform.localEulerAngles.y;
+                case Properties.RotationZ:
+                    return transform.localEulerAngles.z;
                 case Properties.ScaleX:
                     return transform.localScale.x;
                 case Properties.ScaleY:
@@ -113,6 +126,15 @@ namespace Cubeage
                 case Properties.PositionZ:
                     transform.localPosition = transform.localPosition.SetZ(value);
                     break;
+                case Properties.RotationX:
+                    transform.localEulerAngles = transform.localEulerAngles.SetX(value);
+                    break;
+                case Properties.RotationY:
+                    transform.localEulerAngles = transform.localEulerAngles.SetY(value);
+                    break;
+                case Properties.RotationZ:
+                    transform.localEulerAngles = transform.localEulerAngles.SetZ(value);
+                    break;
                 case Properties.ScaleX:
                     transform.localScale = transform.localScale.SetX(value);
                     break;
@@ -125,11 +147,33 @@ namespace Cubeage
             }
         }
 
+        public static string GetLabel(this Properties property)
+        {
+            switch (property)
+            {
+                case Properties.PositionX:
+                case Properties.RotationX:
+                case Properties.ScaleX:
+                    return "X";
+                case Properties.PositionY:
+                case Properties.RotationY:
+                case Properties.ScaleY:
+                    return "Y";
+                case Properties.PositionZ:
+                case Properties.RotationZ:
+                case Properties.ScaleZ:
+                    return "Z";
+                default:
+                    throw new Exception($"Unsupported property: {property}");                        
+            }
+        }
+
         public static Vector3 SetX(this Vector3 vector, float value)
         {
             vector.x = value;
             return vector;
         }
+
         public static Vector3 SetY(this Vector3 vector, float value)
         {
             vector.y = value;
