@@ -57,6 +57,7 @@ namespace Cubeage
                 }
             }
         }
+
         public void Add(Bone bone)
         {
             // Check Controller Part within the avatar
@@ -75,6 +76,22 @@ namespace Cubeage
             }
         }
 
+        public void SetDefault()
+        {
+            DefaultValue = Value;
+        }
+
+        public void SetValue(float value, bool noUpdate = false)
+        {
+            Value = value;
+            if (!noUpdate)
+                Update();
+        }
+
+        public void Reset()
+        {
+            SetValue(DefaultValue);
+        }
 
         public void Add(ControllerPart part)
         {

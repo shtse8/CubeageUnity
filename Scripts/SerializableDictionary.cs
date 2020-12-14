@@ -213,6 +213,8 @@ public abstract class SerializableDictionaryBase<TKey, TValue, TValueStorage> : 
 	#endregion
 }
 
+
+[Serializable]
 public static class SerializableDictionary
 {
 	public class Storage<T> : SerializableDictionaryBase.Storage
@@ -221,6 +223,8 @@ public static class SerializableDictionary
 	}
 }
 
+
+[Serializable]
 public class SerializableDictionary<TKey, TValue> : SerializableDictionaryBase<TKey, TValue, TValue>
 {
 	public SerializableDictionary() { }
@@ -238,6 +242,8 @@ public class SerializableDictionary<TKey, TValue> : SerializableDictionaryBase<T
 	}
 }
 
+
+[Serializable]
 public class SerializableDictionary<TKey, TValue, TValueStorage> : SerializableDictionaryBase<TKey, TValue, TValueStorage> where TValueStorage : SerializableDictionary.Storage<TValue>, new()
 {
 	public SerializableDictionary() { }

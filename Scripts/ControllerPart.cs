@@ -15,33 +15,37 @@ namespace Cubeage
     {
         public BoneController BoneController;
         public ControllerPart Part;
-        public PropertiesDictionary Properties = new PropertiesDictionary();
+        public SerializableDictionary<Property, Entry> Properties = new SerializableDictionary<Property, Entry>();
         public bool isExpanded = false;
 
         public Bone(BoneController boneController, ControllerPart part)
         {
             BoneController = boneController;
             Part = part;
-            foreach (var property in EnumHelper.GetValues<Properties>())
+            foreach (var type in EnumHelper.GetValues<TransformType>())
             {
-                var value = Part.transform.Select(property);
-                Properties.Add(property, new Entry(value));
+                foreach (var direction in EnumHelper.GetValues<Direction>())
+                {
+                    var property = new Property(type, direction);
+                    var value = Part.transform.Select(property);
+                    Properties.Add(property, new Entry(value));
+                }
             }
         }
 
-        public void Transform(Properties property, float value)
+        public void Transform(Property property, float value)
         {
             Properties[property].Value = value;
             Part.transform.Set(property, value);
         }
 
-        public float Transform(Properties property)
+        public float Transform(Property property)
         {
             return Properties[property].Value;
             //return Part.transform.Select(property);
         }
 
-        public bool IsAvailable(Properties property)
+        public bool IsAvailable(Property property)
         {
             return BoneController.Controller.BoneControllers.SelectMany(x => x.Bones)
                 .Where(x => x != this && x.Part == Part)
@@ -49,9 +53,6 @@ namespace Cubeage
                 .All(x => !x.IsEnabled);
         }
     }
-
-    [Serializable]
-    public class PropertiesDictionary : SerializableDictionary<Properties, Entry> { }
 
     [Serializable]
     public class Entry
@@ -71,117 +72,101 @@ namespace Cubeage
         }
     }
 
-
-    public enum Properties
+    [Serializable]
+    public struct Property
     {
-        PositionX,
-        PositionY,
-        PositionZ,
-        RotationX,
-        RotationY,
-        RotationZ,
-        ScaleX,
-        ScaleY,
-        ScaleZ
+        public TransformType Type;
+        public Direction Direction;
+
+        public Property(TransformType type, Direction direction)
+        {
+            Type = type;
+            Direction = direction;
+        }
+
+        public static explicit operator Property(Tuple<TransformType, Direction> tuple)
+        {
+            return new Property(tuple.Item1, tuple.Item2);
+        }
+    }
+
+    public enum TransformType
+    {
+        Position,
+        Rotation,
+        Scale
+    }
+
+    public enum Direction
+    {
+        X,
+        Y,
+        Z
     }
 
     public static class TransformExtensions
     {
-        public static float Select(this Transform transform, Properties property)
+        public static float Select(this Transform transform, Property property)
         {
-            switch (property)
+            switch (property.Type)
             {
-                case Properties.PositionX:
-                    return transform.localPosition.x;
-                case Properties.PositionY:
-                    return transform.localPosition.y;
-                case Properties.PositionZ:
-                    return transform.localPosition.z;
-                case Properties.RotationX:
-                    return transform.localEulerAngles.x;
-                case Properties.RotationY:
-                    return transform.localEulerAngles.y;
-                case Properties.RotationZ:
-                    return transform.localEulerAngles.z;
-                case Properties.ScaleX:
-                    return transform.localScale.x;
-                case Properties.ScaleY:
-                    return transform.localScale.y;
-                case Properties.ScaleZ:
-                    return transform.localScale.z;
+                case TransformType.Position:
+                    return transform.localPosition.Get(property.Direction);
+                case TransformType.Rotation:
+                    return transform.localEulerAngles.Get(property.Direction);
+                case TransformType.Scale:
+                    return transform.localScale.Get(property.Direction);
             }
             return 0;
         }
 
-        public static void Set(this Transform transform, Properties property, float value)
+        public static void Set(this Transform transform, Property property, float value)
         {
-            switch (property)
+            switch (property.Type)
             {
-                case Properties.PositionX:
-                    transform.localPosition = transform.localPosition.SetX(value);
+                case TransformType.Position:
+                    transform.localPosition = transform.localPosition.Set(property.Direction, value);
                     break;
-                case Properties.PositionY:
-                    transform.localPosition = transform.localPosition.SetY(value);
+                case TransformType.Rotation:
+                    transform.localEulerAngles = transform.localEulerAngles.Set(property.Direction, value);
                     break;
-                case Properties.PositionZ:
-                    transform.localPosition = transform.localPosition.SetZ(value);
-                    break;
-                case Properties.RotationX:
-                    transform.localEulerAngles = transform.localEulerAngles.SetX(value);
-                    break;
-                case Properties.RotationY:
-                    transform.localEulerAngles = transform.localEulerAngles.SetY(value);
-                    break;
-                case Properties.RotationZ:
-                    transform.localEulerAngles = transform.localEulerAngles.SetZ(value);
-                    break;
-                case Properties.ScaleX:
-                    transform.localScale = transform.localScale.SetX(value);
-                    break;
-                case Properties.ScaleY:
-                    transform.localScale = transform.localScale.SetY(value);
-                    break;
-                case Properties.ScaleZ:
-                    transform.localScale = transform.localScale.SetZ(value);
+                case TransformType.Scale:
+                    transform.localScale = transform.localScale.Set(property.Direction, value);
                     break;
             }
         }
 
-        public static string GetLabel(this Properties property)
+        public static float Get(this Vector3 vector, Direction direction)
         {
-            switch (property)
+            switch (direction)
             {
-                case Properties.PositionX:
-                case Properties.RotationX:
-                case Properties.ScaleX:
-                    return "X";
-                case Properties.PositionY:
-                case Properties.RotationY:
-                case Properties.ScaleY:
-                    return "Y";
-                case Properties.PositionZ:
-                case Properties.RotationZ:
-                case Properties.ScaleZ:
-                    return "Z";
+                case Direction.X:
+                    return vector.x;
+                case Direction.Y:
+                    return vector.y;
+                case Direction.Z:
+                    return vector.z;
                 default:
-                    throw new Exception($"Unsupported property: {property}");                        
+                    throw new Exception($"Unknown Direction: {direction}");
             }
         }
 
-        public static Vector3 SetX(this Vector3 vector, float value)
+        public static Vector3 Set(this Vector3 vector, Direction direction, float value)
         {
-            vector.x = value;
-            return vector;
-        }
-
-        public static Vector3 SetY(this Vector3 vector, float value)
-        {
-            vector.y = value;
-            return vector;
-        }
-        public static Vector3 SetZ(this Vector3 vector, float value)
-        {
-            vector.z = value;
+            switch (direction)
+            {
+                case Direction.X:
+                    vector.x = value;
+                    break;
+                case Direction.Y:
+                    vector.y = value;
+                    break;
+                case Direction.Z:
+                    vector.z = value;
+                    break;
+                default:
+                    throw new Exception($"Unknown Direction: {direction}");
+            }
             return vector;
         }
 

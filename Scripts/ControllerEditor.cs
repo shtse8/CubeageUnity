@@ -66,16 +66,16 @@ namespace Cubeage
                     textColor = Color.red
                 },
                 margin = new RectOffset(0, 0, 0, 0)
-            }) && EditorUtility.DisplayDialog("Controller @ Cubeage", "Are you sure want to remove?", "Yes", "No");
+            }) && Confirm("Are you sure want to remove?");
         }
 
         public override void OnInspectorGUI()
         {
 
-            if (Layout.Button("Window"))
-            {
-                MyWindow.Init();
-            }
+            // if (Layout.Button("Window"))
+            // {
+            //     MyWindow.Init();
+            // }
             using (Layout.Horizontal())
             {
                 Layout.Object(controller, x => x.Avatar, "Target Avatar", new ActionRecord(controller, "Set Avatar"));
@@ -93,8 +93,6 @@ namespace Cubeage
                 Layout.FlexibleSpace();
             }
             
-            Layout.Line(1);
-
             foreach (var currentController in controller.BoneControllers.ToArray())
             {
                 using (Layout.Horizontal())
@@ -120,6 +118,7 @@ namespace Cubeage
                     }
                 }
 
+
                 if (currentController.isExpanded)
                 {
 
@@ -127,17 +126,7 @@ namespace Cubeage
                     using (Layout.Indent())
                     using (Layout.Box())
                     {
-                        currentController.Mode = GUILayout.Toolbar(currentController.Mode.GetValue(), EnumHelper.GetValues<Mode>().Select(x => x.ToString()).ToArray()).ToEnum<Mode>();
-
-                        switch (currentController.Mode)
-                        {
-                            case Mode.Min:
-                                currentController.Value = 0;
-                                break;
-                            case Mode.Max:
-                                currentController.Value = 100;
-                                break;
-                        }
+                        Layout.EnumToolbar(currentController, x => x.Mode);
 
                         Layout.Label($"Bones ({currentController.Bones.Count})", EditorStyles.boldLabel);
                         foreach (var bone in currentController.Bones.ToArray())
@@ -145,7 +134,6 @@ namespace Cubeage
                             using (Layout.Horizontal())
                             {
                                 Layout.Foldout(bone, x => x.isExpanded);
-                                // GUILayout.Space(-200);
                                 using (Layout.SetEnable(false))
                                 {
                                     Layout.Object(bone.Part);
@@ -157,56 +145,22 @@ namespace Cubeage
                                 }
                             }
 
-                            // get resulting rectangles of items
-                            // var rect = GUILayoutUtility.GetRect(EditorGUIUtility.currentViewWidth, 0);
-                            // // items to layout
-                            // var items = new List<string>
-                            // {
-                            //     "One button", "Another button", "Yet another", "Hey there's more", "More!"
-                            // };
-                            // var style = EditorStyles.miniButton;
-                            // var boxes = EditorGUIUtility.GetFlowLayoutedRects(rect, style, 4, 4, items);
-                            // rect.height = 1000;
-                            // // do actual UI for them
-                            // for (var i = 0; i < boxes.Count; ++i)
-                            // {
-                            //     GUI.Button(boxes[i], items[i], style);
-                            // }
-
                             if (bone.isExpanded)
                             {
                                 using (Layout.Indent())
                                 {
-                                    using (Layout.Horizontal())
+                                    foreach (var type in EnumHelper.GetValues<TransformType>())
                                     {
-                                        EditorGUILayout.LabelField("Position", GUILayout.MinWidth(50));
-                                        using (Layout.SetLabelWidth(10))
+                                        using (Layout.Horizontal())
                                         {
-                                            DrawTransformController(currentController, bone, Properties.PositionX, currentController.Mode);
-                                            DrawTransformController(currentController, bone, Properties.PositionY, currentController.Mode);
-                                            DrawTransformController(currentController, bone, Properties.PositionZ, currentController.Mode);
-                                        }
-                                    }
-
-                                    using (Layout.Horizontal())
-                                    {
-                                        EditorGUILayout.LabelField("Rotation", GUILayout.MinWidth(50));
-                                        using (Layout.SetLabelWidth(10))
-                                        {
-                                            DrawTransformController(currentController, bone, Properties.RotationX, currentController.Mode);
-                                            DrawTransformController(currentController, bone, Properties.RotationY, currentController.Mode);
-                                            DrawTransformController(currentController, bone, Properties.RotationZ, currentController.Mode);
-                                        }
-                                    }
-
-                                    using (Layout.Horizontal())
-                                    {
-                                        EditorGUILayout.LabelField("Scale", GUILayout.MinWidth(50));
-                                        using (Layout.SetLabelWidth(10))
-                                        {
-                                            DrawTransformController(currentController, bone, Properties.ScaleX, currentController.Mode);
-                                            DrawTransformController(currentController, bone, Properties.ScaleY, currentController.Mode);
-                                            DrawTransformController(currentController, bone, Properties.ScaleZ, currentController.Mode);
+                                            EditorGUILayout.LabelField(type.ToString(), GUILayout.MinWidth(50));
+                                            using (Layout.SetLabelWidth(10))
+                                            {
+                                                foreach (var direction in EnumHelper.GetValues<Direction>())
+                                                {
+                                                    DrawTransformController(bone, new Property(type, direction), currentController.Mode);
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -214,8 +168,9 @@ namespace Cubeage
                         }
 
                         using (Layout.Indent())
+                        using (Layout.Horizontal())
                         {
-                            var newControllerPart = Layout.Object<ControllerPart>(null);
+                            var newControllerPart = Layout.Object<ControllerPart>();
                             if (newControllerPart != null)
                             {
                                 try
@@ -223,7 +178,7 @@ namespace Cubeage
                                     currentController.Add(newControllerPart);
                                 } catch (Exception e)
                                 {
-                                    EditorUtility.DisplayDialog("Controller @ Cubeage", e.Message, "Okay");
+                                    Alert(e.Message);
                                 }
                             }
                         }
@@ -237,12 +192,12 @@ namespace Cubeage
                                 Layout.FlexibleSpace();
                                 if (Layout.Button("Reset"))
                                 {
-                                    currentController.Value = currentController.DefaultValue;
+                                    currentController.Reset();
                                 }
 
                                 if (Layout.Button("Set Default"))
                                 {
-                                    currentController.DefaultValue = currentController.Value;
+                                    currentController.SetDefault();
                                 }
                                 Layout.FlexibleSpace();
                             }
@@ -253,10 +208,20 @@ namespace Cubeage
 
         }
 
+        bool Confirm(string message)
+        {
+            return EditorUtility.DisplayDialog("Controller @ Cubeage", message, "Yes", "No");
+        }
+
+        void Alert(string message)
+        {
+            EditorUtility.DisplayDialog("Controller @ Cubeage", message, "Okay");
+        }
+
         /* 
          * Draw Transform Controller with toggle.
          */
-        void DrawTransformController(BoneController boneController, Bone bone, Properties property, Mode mode)
+        void DrawTransformController(Bone bone, Property property, Mode mode)
         {
             var entry = bone.Properties[property];
             if (mode == Mode.View)
@@ -272,15 +237,15 @@ namespace Cubeage
                 switch (mode)
                 {
                     case Mode.Min:
-                        Layout.Float(entry, x => x.Min, property.GetLabel(), new ActionRecord(target, "Change Transform"));
+                        Layout.Float(entry, x => x.Min, property.Direction.ToString(), new ActionRecord(target, "Change Transform"));
                         bone.Transform(property, entry.Min);
                         break;
                     case Mode.Max:
-                        Layout.Float(entry, x => x.Max, property.GetLabel(), new ActionRecord(target, "Change Transform"));
+                        Layout.Float(entry, x => x.Max, property.Direction.ToString(), new ActionRecord(target, "Change Transform"));
                         bone.Transform(property, entry.Max);
                         break;
                     case Mode.View:
-                        Layout.Float(bone.Transform(property), property.GetLabel());
+                        Layout.Float(bone.Transform(property), property.Direction.ToString());
                         break;
                 }
             }
@@ -413,7 +378,7 @@ namespace Cubeage
             return Disposable.Create(() =>
             {
                 disposable.Dispose();
-                EditorGUILayout.Space();
+                Space();
             });
         }
 
@@ -422,13 +387,18 @@ namespace Cubeage
             return GUILayout.Button(label, "ToolbarButton");
         }
 
+        public static void Space()
+        {
+            EditorGUILayout.Space();
+        }
+
         public static IDisposable Horizontal()
         {
             var disposable = new GUILayout.HorizontalScope(GUILayout.ExpandWidth(true));
             return Disposable.Create(() =>
             {
                 disposable.Dispose();
-                EditorGUILayout.Space();
+                Space();
             });
         }
 
@@ -468,10 +438,19 @@ namespace Cubeage
             ValueChanged(target, expression, x => Object(x, label), record);
         }
 
-        public static T Object<T>(T value, string label = null) where T : UnityEngine.Object
+        public static T Object<T>(T value = null, string label = null) where T : UnityEngine.Object
         {
             return (T)EditorGUILayout.ObjectField(label, value, typeof(T), true);
         }
+
+        public static void EnumToolbar<TTarget, T>(TTarget target, Expression<Func<TTarget, T>> expression, ActionRecord record = null) where T : Enum
+        {
+            ValueChanged(target, expression, x => GUILayout.Toolbar(x.GetValue(), EnumHelper.GetValues<T>()
+                                                                                            .Select(y => y.ToString())
+                                                                                            .ToArray())
+                                                           .ToEnum<T>(), record);
+        }
+
 
         public static bool Button(string label)
         {
