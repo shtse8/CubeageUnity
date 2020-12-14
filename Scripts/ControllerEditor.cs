@@ -129,8 +129,13 @@ namespace Cubeage
                         Layout.EnumToolbar(currentController, x => x.Mode);
 
                         Layout.Label($"Bones ({currentController.Bones.Count})", EditorStyles.boldLabel);
-                        foreach (var bone in currentController.Bones.ToArray())
+                        foreach (var bone in currentController.GetValidBones())
                         {
+                            if (!bone.IsValid())
+                            {
+                                currentController.Remove(bone);
+                                continue;
+                            }
                             using (Layout.Horizontal())
                             {
                                 Layout.Foldout(bone, x => x.isExpanded);

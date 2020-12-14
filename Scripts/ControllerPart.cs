@@ -33,6 +33,11 @@ namespace Cubeage
             }
         }
 
+        public bool IsValid()
+        {
+            return Part;
+        }
+
         public void Transform(Property property, float value)
         {
             Properties[property].Value = value;

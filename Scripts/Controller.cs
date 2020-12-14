@@ -45,6 +45,20 @@ namespace Cubeage
             Debug.Log(Id);
         }
 
+        void RemoveInvalidBones()
+        {
+            foreach (var x in Bones.Where(x => !x.IsValid()).ToArray())
+            {
+                Remove(x);
+            }
+        }
+
+        public IEnumerable<Bone> GetValidBones()
+        {
+            RemoveInvalidBones();
+            return Bones.ToArray();
+        }
+
         public void Update()
         {
             var ratio = Value / 100;
