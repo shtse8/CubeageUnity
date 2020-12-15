@@ -29,7 +29,6 @@ namespace Cubeage
     [Serializable]
     public class BoneController 
     {
-        public SerializableGuid Id = SerializableGuid.NewGuid();
         [SerializeReference] public Controller Controller;
         public string Name = "";
         [SerializeReference] public List<Bone> Bones = new List<Bone>();
@@ -42,7 +41,6 @@ namespace Cubeage
         {
             Controller = controller;
             Name = name;
-            Debug.Log(Id);
         }
 
         void RemoveInvalidBones()
@@ -117,38 +115,6 @@ namespace Cubeage
             Bones.Remove(bone);
         }
 
-    }
-
-    [Serializable]
-    public struct SerializableGuid : IEquatable<SerializableGuid>
-    {
-        public static SerializableGuid Empty = new SerializableGuid(Guid.Empty);
-
-        public string value;
-        // [SerializeField]
-        // public byte[] values;
-
-        public SerializableGuid(Guid guid)
-        {
-            // values = guid.ToByteArray();
-            value = guid.ToString();
-        }
-
-        public bool Equals(SerializableGuid other)
-        {
-            // return values.SequenceEqual(other.values);
-            return value.Equals(other.value);
-        }
-
-        public static SerializableGuid NewGuid()
-        {
-            return new SerializableGuid(Guid.NewGuid());
-        }
-
-        public override string ToString() {
-            // return new Guid(values).ToString();
-            return value;
-        }
     }
 
     public enum Mode
