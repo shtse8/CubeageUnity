@@ -97,11 +97,10 @@ namespace Cubeage
             {
                 using (Layout.Horizontal())
                 {
-                    Layout.Foldout(currentController, x => x.isExpanded);
-                    if (!currentController.isExpanded)
+                    Layout.Foldout(currentController, x => x.isExpanded).OnChanged(x =>
                     {
-                        currentController.Mode = Mode.View;
-                    }
+                        if (!x) currentController.Mode = Mode.View;
+                    });
                     Layout.Text(currentController, x => x.Name);
                     using (Layout.SetEnable(currentController.Mode == Mode.View))
                     {
@@ -131,11 +130,6 @@ namespace Cubeage
                         Layout.Label($"Bones ({currentController.Bones.Count})", EditorStyles.boldLabel);
                         foreach (var bone in currentController.GetValidBones())
                         {
-                            if (!bone.IsValid())
-                            {
-                                currentController.Remove(bone);
-                                continue;
-                            }
                             using (Layout.Horizontal())
                             {
                                 Layout.Foldout(bone, x => x.isExpanded);
@@ -158,7 +152,7 @@ namespace Cubeage
                                     {
                                         using (Layout.Horizontal())
                                         {
-                                            EditorGUILayout.LabelField(type.ToString(), GUILayout.MinWidth(50));
+                                            Layout.Label(type.ToString());
                                             using (Layout.SetLabelWidth(10))
                                             {
                                                 foreach (var direction in EnumHelper.GetValues<Direction>())
@@ -504,36 +498,25 @@ namespace Cubeage
             GUILayout.FlexibleSpace();
         }
             
-        public static void Label(string label, GUIStyle style)
+        public static void Label(string label, GUIStyle style = null)
         {
-            EditorGUILayout.LabelField(label, style);
+            if (style != null)
+            {
+                EditorGUILayout.LabelField(label, style);
+            }
+            else
+            {
+                EditorGUILayout.LabelField(label);
+            }
         }
 
         private static LayoutCallback<T> Callback<TTarget, T>(TTarget target, Expression<Func<TTarget, T>> expression, Func<T, T> layoutGenerator, ActionRecord record = null)
         {
-            var selector = expression.Compile();
-            var oldValue = selector(target);
+            //var selector = expression.Compile();
+            var oldValue = target.GetValue(expression);
             var newValue = layoutGenerator(oldValue);
 
             return new LayoutCallback<T>(newValue, oldValue).OnChanged(x => target.SetValue(expression, x));
-        }
-    }
-
-    public class Reference<T>
-    {
-        public T Value { get; set; }
-        public Reference(T value)
-        {
-            Value = value;
-        }
-
-    }
-
-    public static class Reference
-    {
-        public static Reference<T> Wrap<T>(T value)
-        {
-            return new Reference<T>(value);
         }
     }
 

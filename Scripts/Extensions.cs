@@ -29,7 +29,25 @@ namespace Cubeage
                        .GetCustomAttribute<DisplayAttribute>()
                        .Name;
         }
-
+        public static TValue GetValue<T, TValue>(this T target, Expression<Func<T, TValue>> memberLamda)
+        {
+            if (memberLamda.Body is MemberExpression memberSelectorExpression)
+            {
+                switch (memberSelectorExpression.Member)
+                {
+                    case FieldInfo field:
+                        return (TValue) field.GetValue(target);
+                    case PropertyInfo property:
+                        return (TValue) property.GetValue(target, null);
+                    default:
+                        throw new Exception($"Unsupported Expression Member Type: {memberSelectorExpression.Member.MemberType}");
+                }
+            } 
+            else
+            {
+                throw new Exception($"Unsupported Expression Body Type");
+            }
+        }
 
         public static void SetValue<T, TValue>(this T target, Expression<Func<T, TValue>> memberLamda, TValue value)
         {
@@ -46,6 +64,10 @@ namespace Cubeage
                     default:
                         throw new Exception($"Unsupported Expression Member Type: {memberSelectorExpression.Member.MemberType}");
                 }
+            }
+            else
+            {
+                throw new Exception($"Unsupported Expression Body Type");
             }
         }
     }
