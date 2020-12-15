@@ -102,14 +102,14 @@ namespace Cubeage
                     {
                         currentController.Mode = Mode.View;
                     }
-                    currentController.Name = EditorGUILayout.TextField(currentController.Name);
+                    Layout.Text(currentController, x => x.Name);
                     using (Layout.SetEnable(currentController.Mode == Mode.View))
                     {
-                        currentController.Value = EditorGUILayout.Slider(currentController.Value, 0, 100);
-                        if (currentController.Mode == Mode.View)
+                        Layout.Slider(currentController, x => x.Value, 0, 100).OnChanged(_ =>
                         {
-                            currentController.Update();
-                        }
+                            if (currentController.Mode == Mode.View)
+                                currentController.Update();
+                        });
                     }
                     if (DrawRemoveButton())
                     {
@@ -242,12 +242,12 @@ namespace Cubeage
                 switch (mode)
                 {
                     case Mode.Min:
-                        Layout.Float(entry, x => x.Min, property.Direction.ToString(), new ActionRecord(target, "Change Transform"));
-                        bone.Transform(property, entry.Min);
+                        Layout.Float(entry, x => x.Min, property.Direction.ToString(), new ActionRecord(target, "Change Transform"))
+                              .OnChanged(x => bone.Transform(property, x));
                         break;
                     case Mode.Max:
-                        Layout.Float(entry, x => x.Max, property.Direction.ToString(), new ActionRecord(target, "Change Transform"));
-                        bone.Transform(property, entry.Max);
+                        Layout.Float(entry, x => x.Max, property.Direction.ToString(), new ActionRecord(target, "Change Transform"))
+                              .OnChanged(x => bone.Transform(property, x));
                         break;
                     case Mode.View:
                         Layout.Float(bone.Transform(property), property.Direction.ToString());
@@ -339,8 +339,35 @@ namespace Cubeage
         }
     }
 
+    public class LayoutCallback<T>
+    {
+
+        private readonly T oldValue;
+        private readonly T newValue;
+        private bool IsChanged { get => !newValue.Equals(oldValue); }
+
+        public LayoutCallback(T newValue, T oldValue)
+        {
+            this.newValue = newValue;
+            this.oldValue = oldValue;
+        }
+
+        public LayoutCallback<T> OnChanged(Action<T, T> action)
+        {
+            if (IsChanged)
+                action(newValue, oldValue);
+            return this;
+        }
+
+        public LayoutCallback<T> OnChanged(Action<T> action)
+        {
+            return OnChanged((x, _) => action(x));
+        }
+    }
+
     public class Layout
     {
+
         public static IDisposable SetEnable(bool isEnabled)
         {
             var oldValue = GUI.enabled;
@@ -417,20 +444,20 @@ namespace Cubeage
             }
         }
 
-        public static void Toggle<T>(T target, Expression<Func<T, bool>> expression, ActionRecord record = null)
+        public static LayoutCallback<bool> Toggle<T>(T target, Expression<Func<T, bool>> expression, ActionRecord record = null)
         {
-            ValueChanged(target, expression, x => EditorGUILayout.Toggle(x, GUILayout.Width(15)), record);
+            return Callback(target, expression, x => EditorGUILayout.Toggle(x, GUILayout.Width(15)), record);
         }
 
-        public static void Foldout<T>(T target, Expression<Func<T, bool>> expression, ActionRecord record = null)
+        public static LayoutCallback<bool> Foldout<T>(T target, Expression<Func<T, bool>> expression, ActionRecord record = null)
         {
-            ValueChanged(target, expression, x => EditorGUILayout.Toggle(x, new GUIStyle(EditorStyles.foldout), GUILayout.Width(14)), record);
+            return Callback(target, expression, x => EditorGUILayout.Toggle(x, new GUIStyle(EditorStyles.foldout), GUILayout.Width(14)), record);
         }
 
 
-        public static void Float<T>(T target, Expression<Func<T, float>> expression, string label = null, ActionRecord record = null)
+        public static LayoutCallback<float> Float<T>(T target, Expression<Func<T, float>> expression, string label = null, ActionRecord record = null)
         {
-            ValueChanged(target, expression, x => Float(x, label), record);
+            return Callback(target, expression, x => Float(x, label), record);
         }
 
         public static float Float(float value, string label = null)
@@ -438,9 +465,9 @@ namespace Cubeage
             return EditorGUILayout.FloatField(label, value);
         }
 
-        public static void Object<TTarget, T>(TTarget target, Expression<Func<TTarget, T>> expression, string label = null, ActionRecord record = null) where T : UnityEngine.Object
+        public static LayoutCallback<T> Object<TTarget, T>(TTarget target, Expression<Func<TTarget, T>> expression, string label = null, ActionRecord record = null) where T : UnityEngine.Object
         {
-            ValueChanged(target, expression, x => Object(x, label), record);
+            return Callback(target, expression, x => Object(x, label), record);
         }
 
         public static T Object<T>(T value = null, string label = null) where T : UnityEngine.Object
@@ -448,14 +475,24 @@ namespace Cubeage
             return (T)EditorGUILayout.ObjectField(label, value, typeof(T), true);
         }
 
-        public static void EnumToolbar<TTarget, T>(TTarget target, Expression<Func<TTarget, T>> expression, ActionRecord record = null) where T : Enum
+        public static LayoutCallback<T> EnumToolbar<TTarget, T>(TTarget target, Expression<Func<TTarget, T>> expression, ActionRecord record = null) where T : Enum
         {
-            ValueChanged(target, expression, x => GUILayout.Toolbar(x.GetValue(), EnumHelper.GetValues<T>()
+            
+            return Callback(target, expression, x => GUILayout.Toolbar(x.GetValue(), EnumHelper.GetValues<T>()
                                                                                             .Select(y => y.ToString())
                                                                                             .ToArray())
                                                            .ToEnum<T>(), record);
         }
 
+        public static LayoutCallback<float> Slider<T>(T target, Expression<Func<T, float>> expression, float leftValue, float rightValue)
+        {
+            return Callback(target, expression, x => EditorGUILayout.Slider(x, leftValue, rightValue));
+        }
+
+        public static LayoutCallback<string> Text<T>(T target, Expression<Func<T, string>> expression)
+        {
+            return Callback(target, expression, x => EditorGUILayout.TextField(x));
+        }
 
         public static bool Button(string label)
         {
@@ -472,21 +509,13 @@ namespace Cubeage
             EditorGUILayout.LabelField(label, style);
         }
 
-        private static void ValueChanged<TTarget, T>(TTarget target, Expression<Func<TTarget, T>> expression, Func<T, T> layoutGenerator, ActionRecord record = null)
+        private static LayoutCallback<T> Callback<TTarget, T>(TTarget target, Expression<Func<TTarget, T>> expression, Func<T, T> layoutGenerator, ActionRecord record = null)
         {
             var selector = expression.Compile();
             var oldValue = selector(target);
             var newValue = layoutGenerator(oldValue);
 
-            // Value changed.
-            if (!newValue.Equals(oldValue))
-            {
-                Debug.Log(newValue);
-                // Make Undo Record
-                if (record != null)
-                    Undo.RecordObject(record.Target, record.ActionName);
-                target.SetValue(expression, newValue);
-            }
+            return new LayoutCallback<T>(newValue, oldValue).OnChanged(x => target.SetValue(expression, x));
         }
     }
 
