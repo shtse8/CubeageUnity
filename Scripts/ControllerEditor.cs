@@ -78,13 +78,14 @@ namespace Cubeage
             // }
             using (Layout.Horizontal())
             {
-                Layout.Object(controller, x => x.Avatar, "Target Avatar", new ActionRecord(controller, "Set Avatar"));
+                Layout.Object(controller, x => x.Avatar, "Target Avatar", UndoRecord("Set Avatar"));
             }
 
             using (Layout.Toolbar())
             {
                 if (Layout.ToolbarButton("Add"))
                 {
+                    AddUndo("Add Controller");
                     controller.AddController();
                 }
                 if (Layout.ToolbarButton("Reset"))
@@ -97,14 +98,14 @@ namespace Cubeage
             {
                 using (Layout.Horizontal())
                 {
-                    Layout.Foldout(currentController, x => x.isExpanded).OnChanged(x =>
+                    Layout.Foldout(currentController, x => x.isExpanded, UndoRecord("Toggle Controller")).OnChanged(x =>
                     {
                         if (!x) currentController.Mode = Mode.View;
                     });
                     Layout.Text(currentController, x => x.Name);
                     using (Layout.SetEnable(currentController.Mode == Mode.View))
                     {
-                        Layout.Slider(currentController, x => x.Value, 0, 100).OnChanged(_ =>
+                        Layout.Slider(currentController, x => x.Value, 0, 100, UndoRecord("Slide Controller")).OnChanged(_ =>
                         {
                             if (currentController.Mode == Mode.View)
                                 currentController.Update();
@@ -112,6 +113,7 @@ namespace Cubeage
                     }
                     if (DrawRemoveButton())
                     {
+                        AddUndo("Remove Bone");
                         controller.BoneControllers.Remove(currentController);
                         continue;
                     }
@@ -125,20 +127,21 @@ namespace Cubeage
                     using (Layout.Indent())
                     using (Layout.Box())
                     {
-                        Layout.EnumToolbar(currentController, x => x.Mode);
+                        Layout.EnumToolbar(currentController, x => x.Mode, UndoRecord("Change Mode"));
 
                         Layout.Label($"Bones ({currentController.Bones.Count})", EditorStyles.boldLabel);
                         foreach (var bone in currentController.GetValidBones())
                         {
                             using (Layout.Horizontal())
                             {
-                                Layout.Foldout(bone, x => x.isExpanded);
+                                Layout.Foldout(bone, x => x.isExpanded, UndoRecord("Expand Bone"));
                                 using (Layout.SetEnable(false))
                                 {
                                     Layout.Object(bone.Part);
                                 }
                                 if (DrawRemoveButton())
                                 {
+                                    AddUndo("Remove Bone");
                                     currentController.Remove(bone);
                                     continue;
                                 }
@@ -174,6 +177,7 @@ namespace Cubeage
                             {
                                 try
                                 {
+                                    AddUndo("Add Bone");
                                     currentController.Add(newControllerPart);
                                 } catch (Exception e)
                                 {
@@ -191,11 +195,13 @@ namespace Cubeage
                                 Layout.FlexibleSpace();
                                 if (Layout.Button("Reset"))
                                 {
+                                    AddUndo("Reset Controller");
                                     currentController.Reset();
                                 }
 
                                 if (Layout.Button("Set Default"))
                                 {
+                                    AddUndo("Set Controller Default");
                                     currentController.SetDefault();
                                 }
                                 Layout.FlexibleSpace();
@@ -205,6 +211,16 @@ namespace Cubeage
                 }
             }
 
+        }
+
+        ActionRecord UndoRecord(string name)
+        {
+            return new ActionRecord(controller, name);
+        }
+
+        void AddUndo(string name)
+        {
+            Undo.RecordObject(controller, name);
         }
 
         bool Confirm(string message)
@@ -227,7 +243,7 @@ namespace Cubeage
             {
                 using (Layout.SetEnable(entry.IsEnabled || bone.IsAvailable(property)))
                 {
-                    Layout.Toggle(entry, x => x.IsEnabled, new ActionRecord(target, "Toggle Property"));
+                    Layout.Toggle(entry, x => x.IsEnabled, UndoRecord("Toggle Property"));
                 }
             }
 
@@ -236,11 +252,11 @@ namespace Cubeage
                 switch (mode)
                 {
                     case Mode.Min:
-                        Layout.Float(entry, x => x.Min, property.Direction.ToString(), new ActionRecord(target, "Change Transform"))
+                        Layout.Float(entry, x => x.Min, property.Direction.ToString(), UndoRecord("Change Transform"))
                               .OnChanged(x => bone.Transform(property, x));
                         break;
                     case Mode.Max:
-                        Layout.Float(entry, x => x.Max, property.Direction.ToString(), new ActionRecord(target, "Change Transform"))
+                        Layout.Float(entry, x => x.Max, property.Direction.ToString(), UndoRecord("Change Transform"))
                               .OnChanged(x => bone.Transform(property, x));
                         break;
                     case Mode.View:
@@ -356,6 +372,18 @@ namespace Cubeage
         public LayoutCallback<T> OnChanged(Action<T> action)
         {
             return OnChanged((x, _) => action(x));
+        }
+
+        public LayoutCallback<T> OnChanged(Action action)
+        {
+            return OnChanged(_ => action());
+        }
+
+        public LayoutCallback<T> OnBeforeChanged(Action action)
+        {
+            if (IsChanged)
+                action();
+            return this;
         }
     }
 
@@ -478,14 +506,14 @@ namespace Cubeage
                                                            .ToEnum<T>(), record);
         }
 
-        public static LayoutCallback<float> Slider<T>(T target, Expression<Func<T, float>> expression, float leftValue, float rightValue)
+        public static LayoutCallback<float> Slider<T>(T target, Expression<Func<T, float>> expression, float leftValue, float rightValue, ActionRecord record = null)
         {
-            return Callback(target, expression, x => EditorGUILayout.Slider(x, leftValue, rightValue));
+            return Callback(target, expression, x => EditorGUILayout.Slider(x, leftValue, rightValue), record);
         }
 
-        public static LayoutCallback<string> Text<T>(T target, Expression<Func<T, string>> expression)
+        public static LayoutCallback<string> Text<T>(T target, Expression<Func<T, string>> expression, ActionRecord record = null)
         {
-            return Callback(target, expression, x => EditorGUILayout.TextField(x));
+            return Callback(target, expression, x => EditorGUILayout.TextField(x), record);
         }
 
         public static bool Button(string label)
@@ -516,7 +544,11 @@ namespace Cubeage
             var oldValue = target.GetValue(expression);
             var newValue = layoutGenerator(oldValue);
 
-            return new LayoutCallback<T>(newValue, oldValue).OnChanged(x => target.SetValue(expression, x));
+            return new LayoutCallback<T>(newValue, oldValue).OnChanged(x =>
+            {
+                Undo.RecordObject(record.Target, record.ActionName);
+                target.SetValue(expression, x);
+            });
         }
     }
 
