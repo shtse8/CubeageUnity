@@ -33,6 +33,15 @@ namespace Cubeage
             }
         }
 
+        public void TransformCounterBones(Property property, float value)
+        {
+            var counterValue = 1 / (value / Properties[property].Origin);
+            foreach (var part in Part.GetComponentsInChildren<ControllerCounterPart>())
+            {
+                part.transform.Set(property, counterValue);
+            }
+        }
+
         public bool IsValid()
         {
             return Part;
@@ -42,6 +51,7 @@ namespace Cubeage
         {
             Properties[property].Value = value;
             Part.transform.Set(property, value);
+            TransformCounterBones(property, value);
         }
 
         public float Transform(Property property)
