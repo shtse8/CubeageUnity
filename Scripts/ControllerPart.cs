@@ -27,7 +27,7 @@ namespace Cubeage
                 foreach (var direction in EnumHelper.GetValues<Direction>())
                 {
                     var property = new Property(type, direction);
-                    var value = Part.transform.Select(property);
+                    var value = Part.transform.Get(property);
                     Properties.Add(property, new Entry(value));
                 }
             }
@@ -35,10 +35,12 @@ namespace Cubeage
 
         public void TransformCounterBones(Property property, float value)
         {
-            var counterValue = 1 / (value / Properties[property].Origin);
+            var valueChanged = value / Properties[property].Value;
             foreach (var part in Part.GetComponentsInChildren<ControllerCounterPart>())
             {
-                part.transform.Set(property, counterValue);
+                var oldValue = part.transform.Get(property);
+                var newValue = oldValue * 1 / valueChanged;
+                part.transform.Set(property, newValue);
             }
         }
 
@@ -49,9 +51,9 @@ namespace Cubeage
 
         public void Transform(Property property, float value)
         {
+            TransformCounterBones(property, value);
             Properties[property].Value = value;
             Part.transform.Set(property, value);
-            TransformCounterBones(property, value);
         }
 
         public float Transform(Property property)
@@ -121,7 +123,7 @@ namespace Cubeage
 
     public static class TransformExtensions
     {
-        public static float Select(this Transform transform, Property property)
+        public static float Get(this Transform transform, Property property)
         {
             switch (property.Type)
             {
