@@ -249,14 +249,18 @@ namespace Cubeage
 
             using (Layout.SetEnable(mode != Mode.View && entry.IsEnabled))
             {
+                float? minValue = null;
+                if (property.Type == TransformType.Scale)
+                    minValue = 0.01f;
                 switch (mode)
                 {
                     case Mode.Min:
-                        Layout.Float(entry, x => x.Min, property.Direction.ToString(), UndoRecord("Change Transform"))
+                        
+                        Layout.Float(entry, x => x.Min, property.Direction.ToString(), minValue, UndoRecord("Change Transform"))
                               .OnChanged(x => bone.Transform(property, x));
                         break;
                     case Mode.Max:
-                        Layout.Float(entry, x => x.Max, property.Direction.ToString(), UndoRecord("Change Transform"))
+                        Layout.Float(entry, x => x.Max, property.Direction.ToString(), minValue, UndoRecord("Change Transform"))
                               .OnChanged(x => bone.Transform(property, x));
                         break;
                     case Mode.View:
@@ -477,9 +481,15 @@ namespace Cubeage
         }
 
 
-        public static LayoutCallback<float> Float<T>(T target, Expression<Func<T, float>> expression, string label = null, ActionRecord record = null)
+        public static LayoutCallback<float> Float<T>(T target, Expression<Func<T, float>> expression, string label = null, float? minValue = null, ActionRecord record = null)
         {
-            return Callback(target, expression, x => Float(x, label), record);
+            return Callback(target, expression, x =>
+            {
+                var value = Float(x, label);
+                if (minValue.HasValue)
+                    value = Math.Max(minValue.Value, value);
+                return value;
+            }, record);
         }
 
         public static float Float(float value, string label = null)

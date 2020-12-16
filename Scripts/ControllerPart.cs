@@ -27,20 +27,65 @@ namespace Cubeage
                 foreach (var direction in EnumHelper.GetValues<Direction>())
                 {
                     var property = new Property(type, direction);
-                    var value = Part.transform.Get(property);
-                    Properties.Add(property, new Entry(value));
+                    var origin = Part.transform.Get(property);
+                    var value = type == TransformType.Scale ? 1 : 0;
+                    Properties.Add(property, new Entry(value, origin));
                 }
             }
         }
 
-        public void TransformCounterBones(Property property, float value)
+        public void TransformCounterBones(Property property, float change)
         {
-            var valueChanged = value / Properties[property].Value;
-            foreach (var part in Part.GetComponentsInChildren<ControllerCounterPart>())
+            change = GetCounterChange(property, change);
+            foreach (var part in Part.GetComponentsInChildren<ControllerPart>()
+                                     .Where(x => x != Part)
+                                     .Where(x => x.GetComponentsInParent<ControllerPart>().Where(y => y != x).First().Equals(Part)))
             {
-                var oldValue = part.transform.Get(property);
-                var newValue = oldValue * 1 / valueChanged;
+                var newValue = GetValue(part, property, change);
                 part.transform.Set(property, newValue);
+            }
+        }
+
+        float GetChange(Property property, float value)
+        {
+            switch (property.Type)
+            {
+                case TransformType.Position:
+                case TransformType.Rotation:
+                    return value - Properties[property].Value;
+                case TransformType.Scale:
+                    return value / Properties[property].Value;
+                default:
+                    throw new Exception("Unknown Type.");
+            }
+        }
+
+        float GetValue(Component component, Property property, float change)
+        {
+            var value = component.transform.Get(property);
+            switch (property.Type)
+            {
+                case TransformType.Position:
+                case TransformType.Rotation:
+                    return value + change;
+                case TransformType.Scale:
+                    return value * change;
+                default:
+                    throw new Exception("Unknown Type.");
+            }
+        }
+
+        float GetCounterChange(Property property, float change)
+        {
+            switch (property.Type)
+            {
+                case TransformType.Position:
+                case TransformType.Rotation:
+                    return -change;
+                case TransformType.Scale:
+                    return 1 / change;
+                default:
+                    throw new Exception("Unknown Type.");
             }
         }
 
@@ -51,9 +96,15 @@ namespace Cubeage
 
         public void Transform(Property property, float value)
         {
-            TransformCounterBones(property, value);
+                // throw new Exception("Scale cannot smaller than 0.");
+
+            var change = GetChange(property, value);
+            TransformCounterBones(property, change);
+
+            var partValue = GetValue(Part, property, change);
+            Part.transform.Set(property, partValue);
+
             Properties[property].Value = value;
-            Part.transform.Set(property, value);
         }
 
         public float Transform(Property property)
@@ -80,12 +131,12 @@ namespace Cubeage
         public float Origin;
         public float Value;
 
-        public Entry(float value)
+        public Entry(float value, float origin)
         {
             Min = value;
             Max = value;
-            Origin = value;
             Value = value;
+            Origin = origin;
         }
     }
 
