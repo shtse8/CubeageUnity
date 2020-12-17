@@ -44,8 +44,12 @@ namespace Cubeage
         {
             using (Layout.Horizontal())
             {
-                Layout.Object(controller, x => x.Avatar, "Target Avatar")
-                    .ApplyChange(() => AddUndo("Set Avatar"));
+                Layout.Object(controller.Avatar, "Target Avatar")
+                    .OnChanged(x =>
+                    {
+                        AddUndo("Set Avatar");
+                        controller.Avatar = x;
+                    });
             }
 
             using (Layout.Horizontal())
@@ -101,11 +105,15 @@ namespace Cubeage
                               AddUndo("Toggle Controller");
                               currentController.IsExpanded = x;
                           });
-                    Layout.Text(currentController, x => x.Name);
+                    Layout.Text(currentController.Name);
                     using (Layout.SetEnable(currentController.Mode == Mode.View))
                     {
-                        Layout.Slider(currentController, x => x.Value, 0, 100)
-                            .ApplyChange(() => AddUndo("Slide Controller"));
+                        Layout.Slider(currentController.Value, 0, 100)
+                            .OnChanged(x =>
+                            {
+                                AddUndo("Slide Controller");
+                                currentController.Value = x;
+                            });
                     }
                     if (DrawRemoveButton())
                     {
@@ -123,15 +131,23 @@ namespace Cubeage
                     using (Layout.Indent())
                     using (Layout.Box())
                     {
-                        Layout.EnumToolbar(currentController, x => x.Mode).ApplyChange(() => AddUndo("Change Mode"));
+                        Layout.EnumToolbar(currentController.Mode).OnChanged(x =>
+                        {
+                            AddUndo("Change Mode");
+                            currentController.Mode = x;
+                        });
 
                         Layout.Label($"Bones ({currentController.Bones.Count})", EditorStyles.boldLabel);
                         foreach (var bone in currentController.GetValidBones())
                         {
                             using (Layout.Horizontal())
                             {
-                                Layout.Foldout(bone, x => x.isExpanded)
-                                      .ApplyChange(() => AddUndo("Expand Bone"));
+                                Layout.Foldout(bone.isExpanded)
+                                    .OnChanged(x =>
+                                    {
+                                        AddUndo("Expand Bone");
+                                        bone.isExpanded = x;
+                                    });
 
                                 using (Layout.SetEnable(false))
                                 {
@@ -170,18 +186,21 @@ namespace Cubeage
                         using (Layout.Indent())
                         using (Layout.Horizontal())
                         {
-                            var newControllerPart = Layout.Object<Transform>();
-                            if (newControllerPart != null)
+                            Layout.Object<Transform>(null).OnChanged(x =>
                             {
-                                try
+                                if (x != null)
                                 {
-                                    AddUndo("Add Bone");
-                                    currentController.Add(newControllerPart);
-                                } catch (Exception e)
-                                {
-                                    Alert(e.Message);
+                                    try
+                                    {
+                                        AddUndo("Add Bone");
+                                        currentController.Add(x);
+                                    }
+                                    catch (Exception e)
+                                    {
+                                        Alert(e.Message);
+                                    }
                                 }
-                            }
+                            });
                         }
 
 
@@ -242,17 +261,14 @@ namespace Cubeage
         void DrawTransformController(Bone bone, Property property, BoneController boneController)
         {
             var entry = bone.Properties[property];
-            if (boneController.Mode == Mode.View)
+            using (Layout.SetEnable(entry.IsEnabled || bone.IsAvailable(property)))
             {
-                using (Layout.SetEnable(entry.IsEnabled || bone.IsAvailable(property)))
-                {
-                    Layout.Toggle(entry.IsEnabled)
-                          .OnChanged(x =>
-                          {
-                              AddUndo("Toggle Property");
-                              entry.IsEnabled = x;
-                          });
-                }
+                Layout.Toggle(entry.IsEnabled)
+                        .OnChanged(x =>
+                        {
+                            AddUndo("Toggle Property");
+                            entry.IsEnabled = x;
+                        });
             }
 
             using (Layout.SetEnable(boneController.Mode != Mode.View && entry.IsEnabled))
@@ -264,7 +280,7 @@ namespace Cubeage
                 {
                     case Mode.Min:
                         
-                        Layout.Float(entry, x => x.Min, property.Direction.ToString(), minValue)
+                        Layout.Float(entry.Min, property.Direction.ToString(), minValue)
                             .OnChanged(x =>
                             {
                                 AddUndo("Change Transform");
@@ -272,7 +288,7 @@ namespace Cubeage
                             });
                         break;
                     case Mode.Max:
-                        Layout.Float(entry, x => x.Max, property.Direction.ToString(), minValue)
+                        Layout.Float(entry.Max, property.Direction.ToString(), minValue)
                             .OnChanged(x =>
                             {
                                 AddUndo("Change Transform");
@@ -391,7 +407,7 @@ namespace Cubeage
 
         public LayoutPromise<TValue> OnChanged(Action<TValue, TValue> action)
         {
-            if (!NewValue.Equals(OldValue))
+            if (!Equals(NewValue, OldValue))
                 action(NewValue, OldValue);
             return this;
         }
@@ -502,67 +518,45 @@ namespace Cubeage
             return new LayoutPromise<bool>(value, x => EditorGUILayout.Toggle(x, GUILayout.Width(15)));
         }
 
-        public static LayoutPromise<T, bool> Toggle<T>(T target, Expression<Func<T, bool>> expression)
-        {
-            return new LayoutPromise<T, bool>(target, expression, x => EditorGUILayout.Toggle(x, GUILayout.Width(15)));
-        }
-
-        public static LayoutPromise<T, bool> Foldout<T>(T target, Expression<Func<T, bool>> expression)
-        {
-            return new LayoutPromise<T, bool>(target, expression, x => EditorGUILayout.Toggle(x, new GUIStyle(EditorStyles.foldout), GUILayout.Width(14)));
-        }
-
-
         public static LayoutPromise<bool> Foldout(bool value)
         {
             return new LayoutPromise<bool>(value, x => EditorGUILayout.Toggle(x, new GUIStyle(EditorStyles.foldout), GUILayout.Width(14)));
         }
 
-        public static LayoutPromise<T, float> Float<T>(T target, Expression<Func<T, float>> expression, string label = null, float? minValue = null)
+        public static LayoutPromise<float> Float(float value, string label = null, float? minValue = null)
         {
-            return new LayoutPromise<T, float>(target, expression, x =>
+            return new LayoutPromise<float>(value, x =>
             {
-                var value = Float(x, label);
+                var newValue = EditorGUILayout.FloatField(label, x);
                 if (minValue.HasValue)
-                    value = Math.Max(minValue.Value, value);
-                return value;
+                    newValue = Math.Max(minValue.Value, newValue);
+                return newValue;
             });
         }
 
 
-        // Need refactor
-        public static float Float(float value, string label = null)
+        public static LayoutPromise<T> Object<T>(T value, string label = null) where T : UnityEngine.Object
         {
-            return EditorGUILayout.FloatField(label, value);
+            return new LayoutPromise<T>(value, x => (T)EditorGUILayout.ObjectField(label, value, typeof(T), true));
         }
 
-        public static T Object<T>(T value = null, string label = null) where T : UnityEngine.Object
-        {
-            return (T)EditorGUILayout.ObjectField(label, value, typeof(T), true);
-        }
-
-        public static LayoutPromise<TTarget, TValue> Object<TTarget, TValue>(TTarget target, Expression<Func<TTarget, TValue>> expression, string label = null) where TValue : UnityEngine.Object
-        {
-            return new LayoutPromise<TTarget, TValue>(target, expression, x => Object(x, label));
-        }
-
-        public static LayoutPromise<TTarget, TValue> EnumToolbar<TTarget, TValue>(TTarget target, Expression<Func<TTarget, TValue>> expression) where TValue : Enum
+        public static LayoutPromise<T> EnumToolbar<T>(T value) where T : Enum
         {
             
-            return new LayoutPromise<TTarget, TValue>(target, expression, x => GUILayout.Toolbar(x.GetValue(), EnumHelper.GetValues<TValue>()
+            return new LayoutPromise<T>(value, x => GUILayout.Toolbar(x.GetValue(), EnumHelper.GetValues<T>()
                                                                                             .Select(y => y.ToString())
                                                                                             .ToArray())
-                                                           .ToEnum<TValue>());
+                                                           .ToEnum<T>());
         }
 
-        public static LayoutPromise<T, float> Slider<T>(T target, Expression<Func<T, float>> expression, float leftValue, float rightValue)
+        public static LayoutPromise<float> Slider(float value, float leftValue, float rightValue)
         {
-            return new LayoutPromise<T, float>(target, expression, x => EditorGUILayout.Slider(x, leftValue, rightValue));
+            return new LayoutPromise<float>(value, x => EditorGUILayout.Slider(x, leftValue, rightValue));
         }
 
-        public static LayoutPromise<T, string> Text<T>(T target, Expression<Func<T, string>> expression)
+        public static LayoutPromise<string> Text(string value)
         {
-            return new LayoutPromise<T, string>(target, expression, x => EditorGUILayout.TextField(x));
+            return new LayoutPromise<string>(value, x => EditorGUILayout.TextField(x));
         }
 
         public static void Label(string label, GUIStyle style = null)
