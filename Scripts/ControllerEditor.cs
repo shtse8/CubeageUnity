@@ -222,7 +222,7 @@ namespace Cubeage
                           .OnChanged(x =>
                           {
                               AddUndo("Toggle Property");
-                              bone.SetEnable(property, x);
+                              entry.IsEnabled = x;
                           });
                 }
             }
@@ -240,7 +240,7 @@ namespace Cubeage
                             .OnChanged(x =>
                             {
                                 AddUndo("Change Transform");
-                                bone.SetMin(property, x);
+                                entry.Min = x;
                             });
                         break;
                     case Mode.Max:
@@ -248,11 +248,11 @@ namespace Cubeage
                             .OnChanged(x =>
                             {
                                 AddUndo("Change Transform");
-                                bone.SetMax(property, x);
+                                entry.Max = x;
                             });
                         break;
                     case Mode.View:
-                        Layout.Float(bone.Transform(property), property.Direction.ToString());
+                        Layout.Float(entry.Value, property.Direction.ToString());
                         break;
                 }
             }
