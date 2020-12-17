@@ -82,6 +82,10 @@ namespace Cubeage
                     AddUndo("Add Controller");
                     controller.AddController();
                 }
+                if (Layout.ToolbarButton("Reset"))
+                {
+                    controller.ResetBones();
+                }
                 if (Layout.ToolbarButton("Debug"))
                 {
 
@@ -105,6 +109,12 @@ namespace Cubeage
                               AddUndo("Toggle Controller");
                               currentController.IsExpanded = x;
                           });
+                    Layout.Toggle(currentController.IsEnabled)
+                            .OnChanged(x =>
+                            {
+                                AddUndo("Toggle Controller");
+                                currentController.IsEnabled = x;
+                            });
                     Layout.Text(currentController.Name);
                     Layout.Slider(currentController.Value, 0, 100)
                         .OnChanged(x =>
@@ -273,28 +283,35 @@ namespace Cubeage
                 float? minValue = null;
                 if (property.Type == TransformType.Scale)
                     minValue = 0.01f;
-                switch (boneController.Mode)
+                if (entry.IsEnabled)
                 {
-                    case Mode.Min:
-                        
-                        Layout.Float(entry.Min, property.Direction.ToString(), minValue)
-                            .OnChanged(x =>
-                            {
-                                AddUndo("Change Transform");
-                                entry.Min = x;
-                            });
-                        break;
-                    case Mode.Max:
-                        Layout.Float(entry.Max, property.Direction.ToString(), minValue)
-                            .OnChanged(x =>
-                            {
-                                AddUndo("Change Transform");
-                                entry.Max = x;
-                            });
-                        break;
-                    case Mode.View:
-                        Layout.Float(entry.Value, property.Direction.ToString());
-                        break;
+                    switch (boneController.Mode)
+                    {
+                        case Mode.Min:
+
+                            Layout.Float(entry.Min, property.Direction.ToString(), minValue)
+                                .OnChanged(x =>
+                                {
+                                    AddUndo("Change Transform");
+                                    entry.Min = x;
+                                });
+                            break;
+                        case Mode.Max:
+                            Layout.Float(entry.Max, property.Direction.ToString(), minValue)
+                                .OnChanged(x =>
+                                {
+                                    AddUndo("Change Transform");
+                                    entry.Max = x;
+                                });
+                            break;
+                        case Mode.View:
+                            Layout.Float(entry.Value, property.Direction.ToString());
+                            break;
+                    }
+                } 
+                else
+                {
+                    Layout.Float(entry.Value, property.Direction.ToString());
                 }
             }
         }

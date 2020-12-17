@@ -20,15 +20,11 @@ namespace Cubeage
             get => _isEnabled;
             set
             {
+                if (Equals(_isEnabled, value))
+                    return;
+
+                Value = value && Bone.BoneController.IsEnabled ? GetValue(Bone.BoneController.Value) : DefaultValue;
                 _isEnabled = value;
-                if (value)
-                {
-                    Value = GetValue(Bone.BoneController.Value);
-                }
-                else
-                {
-                    Value = DefaultValue;
-                }
             }
         }
 
@@ -39,6 +35,9 @@ namespace Cubeage
             get => _min;
             set
             {
+                if (Equals(_min, value))
+                    return;
+
                 _min = value;
                 Value = value;
             }
@@ -52,6 +51,9 @@ namespace Cubeage
             get => _max;
             set
             {
+                if (Equals(_max, value))
+                    return;
+
                 _max = value;
                 Value = value;
             }
@@ -66,14 +68,20 @@ namespace Cubeage
             get => _value;
             set
             {
+                if (Equals(_value, value))
+                    return;
 
-                var change = GetChange(value);
-                TransformCounterBones(Property, change);
+                if (IsEnabled && Bone.BoneController.IsEnabled)
+                {
+                    Debug.Log($"{Property.Type} {Property.Direction}, {value}, {_value}");
+                    var change = GetChange(value);
+                    TransformCounterBones(Property, change);
 
-                var partValue = GetValue(Bone.Part, change);
-                Bone.Part.transform.Set(Property, partValue);
+                    var partValue = GetValue(Bone.Part, change);
+                    Bone.Part.transform.Set(Property, partValue);
 
-                _value = value;
+                    _value = value;
+                }
             }
         }
 
@@ -102,7 +110,7 @@ namespace Cubeage
             Origin = origin;
         }
 
-        float DefaultValue
+        public float DefaultValue
         {
             get => Property.Type == TransformType.Scale ? 1 : 0;
         }
@@ -175,7 +183,7 @@ namespace Cubeage
             }
         }
 
-        float GetValue(float scale)
+        public float GetValue(float scale)
         {
             return Min + (Max - Min) * scale / 100;
         }

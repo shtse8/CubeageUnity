@@ -16,6 +16,26 @@ namespace Cubeage
         public float DefaultValue = 50;
 
         [SerializeField]
+        private bool _isEnabled = true;
+
+        public bool IsEnabled
+        {
+            get => _isEnabled;
+            set
+            {
+                if (Equals(_isEnabled, value))
+                    return;
+
+                foreach(var entry in Bones.SelectMany(x => x.Properties.Values).Where(x => x.IsEnabled))
+                {
+                    entry.Value = value ? entry.GetValue(Value) : entry.DefaultValue;
+                }
+                _isEnabled = value;
+            }
+        }
+
+
+        [SerializeField]
         private float _value = 50;
 
         [SerializeField]

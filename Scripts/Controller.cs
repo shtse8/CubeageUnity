@@ -61,6 +61,29 @@ namespace Cubeage
             return component.name.EndsWith("_bc");
         }
 
+        public void ResetBones()
+        {
+            var dict = new Dictionary<BoneController, bool>();
+            foreach(var controller in BoneControllers)
+            {
+                dict.Add(controller, controller.IsEnabled);
+                controller.IsEnabled = false;
+            }
+
+            // Reset transform.
+            foreach((var transform, var data) in ValidBones)
+            {
+                transform.localPosition = data.localPosition;
+                transform.localScale = data.localScale;
+                transform.localEulerAngles = data.localEulerAngles;
+            }
+
+            foreach ((var controller, var isEnabled) in dict)
+            {
+                controller.IsEnabled = isEnabled;
+            }
+        }
+
         TransformData GetData(Transform transform)
         {
             return new TransformData
