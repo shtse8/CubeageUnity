@@ -124,6 +124,9 @@ namespace Cubeage
 
         public void Add(Transform part)
         {
+            if (!Controller.ValidBones.Contains(part))
+                throw new Exception("Component is not valid.");
+
             Add(new Bone(this, part));
         }
 

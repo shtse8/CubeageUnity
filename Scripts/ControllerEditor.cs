@@ -14,6 +14,7 @@ namespace Cubeage
     [CanEditMultipleObjects]
     public class ControllerEditor : Editor
     {
+        bool showAllValidBones = false;
         Controller controller;
         // Dictionary<ControllerPart, bool> isExpandedStates = new Dictionary<ControllerPart, bool>();
 
@@ -38,12 +39,36 @@ namespace Cubeage
             }) && Confirm("Are you sure want to remove?");
         }
 
+
         public override void OnInspectorGUI()
         {
             using (Layout.Horizontal())
             {
                 Layout.Object(controller, x => x.Avatar, "Target Avatar")
                     .ApplyChange(() => AddUndo("Set Avatar"));
+            }
+
+            using (Layout.Horizontal())
+            using (Layout.Box())
+            {
+                using (Layout.Horizontal())
+                {
+                    Layout.Foldout(showAllValidBones).OnChanged(x => showAllValidBones = x);
+                    Layout.Label($"Bones: {controller.ValidBones.Count}");
+                }
+                    
+                if (showAllValidBones)
+                {
+                    using (Layout.Indent())
+                    {
+                        foreach (var bone in controller.ValidBones.Keys)
+                        {
+                            using (Layout.Horizontal())
+                                Layout.Label(bone.name);
+                        }
+                    }
+                }
+
             }
 
             using (Layout.Toolbar())
@@ -71,8 +96,11 @@ namespace Cubeage
             {
                 using (Layout.Horizontal())
                 {
-                    Layout.Foldout(currentController, x => x.IsExpanded)
-                          .ApplyChange(() => AddUndo("Toggle Controller"));
+                    Layout.Foldout(currentController.IsExpanded)
+                          .OnChanged(x => {
+                              AddUndo("Toggle Controller");
+                              currentController.IsExpanded = x;
+                          });
                     Layout.Text(currentController, x => x.Name);
                     using (Layout.SetEnable(currentController.Mode == Mode.View))
                     {
@@ -484,6 +512,11 @@ namespace Cubeage
             return new LayoutPromise<T, bool>(target, expression, x => EditorGUILayout.Toggle(x, new GUIStyle(EditorStyles.foldout), GUILayout.Width(14)));
         }
 
+
+        public static LayoutPromise<bool> Foldout(bool value)
+        {
+            return new LayoutPromise<bool>(value, x => EditorGUILayout.Toggle(x, new GUIStyle(EditorStyles.foldout), GUILayout.Width(14)));
+        }
 
         public static LayoutPromise<T, float> Float<T>(T target, Expression<Func<T, float>> expression, string label = null, float? minValue = null)
         {

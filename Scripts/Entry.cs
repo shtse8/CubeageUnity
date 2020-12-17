@@ -128,7 +128,7 @@ namespace Cubeage
             for (var i = 0; i < transform.childCount; i++)
             {
                 var child = transform.GetChild(i);
-                if (child.name.EndsWith("_bc"))
+                if (Bone.BoneController.Controller.ValidBones.Contains(child))
                     bones.Add(child);
                 else
                     bones.AddRange(SearchBonesRecursive(child));
