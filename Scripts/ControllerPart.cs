@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEditor;
 using UnityEngine;
 
 namespace Cubeage
@@ -28,10 +29,14 @@ namespace Cubeage
                 {
                     var property = new Property(type, direction);
                     var origin = Part.transform.Get(property);
-                    var value = type == TransformType.Scale ? 1 : 0;
-                    Properties.Add(property, new Entry(value, origin));
+                    Properties.Add(property, new Entry(GetDefaultValue(type), origin));
                 }
             }
+        }
+
+        float GetDefaultValue(TransformType type)
+        {
+            return type == TransformType.Scale ? 1 : 0;
         }
 
         public void TransformCounterBones(Property property, float change)
@@ -120,6 +125,37 @@ namespace Cubeage
                 .Select(x => x.Properties[property])
                 .All(x => !x.IsEnabled);
         }
+
+        public float GetValue(Property property, float scale)
+        {
+            var targetProperty = Properties[property];
+            return targetProperty.Min + (targetProperty.Max - targetProperty.Min) * scale / 100;
+        }
+
+        public void SetEnable(Property property, bool isEnabled)
+        {
+            Properties[property].IsEnabled = isEnabled;
+            if (isEnabled)
+            {
+                Transform(property, GetValue(property, BoneController.Value));
+            }
+            else
+            {
+                Transform(property, GetDefaultValue(property.Type));
+            }
+        }
+
+        public void SetMax(Property property, float value)
+        {
+            Properties[property].Max = value;
+            Transform(property, GetValue(Part, property, GetChange(property, value)));
+        }
+
+        public void SetMin(Property property, float value)
+        {
+            Properties[property].Min = value;
+            Transform(property, GetValue(Part, property, GetChange(property, value)));
+        }
     }
 
     [Serializable]
@@ -138,6 +174,12 @@ namespace Cubeage
             Value = value;
             Origin = origin;
         }
+    }
+
+    public class Range
+    {
+        public float? Min;
+        public float? Max;
     }
 
     [Serializable]

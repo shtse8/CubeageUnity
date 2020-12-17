@@ -17,6 +17,7 @@ namespace Cubeage
         void Reset()
         {
             Avatar = gameObject;
+
         }
 
         public void AddController()
@@ -26,16 +27,57 @@ namespace Cubeage
 
     }
 
+
+
     [Serializable]
-    public class BoneController 
+    public class BoneController : ISerializationCallbackReceiver
     {
         [SerializeReference] public Controller Controller;
         public string Name = "";
         [SerializeReference] public List<Bone> Bones = new List<Bone>();
-        public bool isExpanded = false;
-        public float Value = 50;
+        
         public float DefaultValue = 50;
-        public Mode Mode = Mode.View;
+
+        private bool _isExpanded = false;
+        private float _value = 50;
+        private Mode _mode = Mode.View;
+
+        public bool IsExpanded
+        {
+            get => _isExpanded;
+            set {
+                _isExpanded = value;
+                if (!value)
+                    Mode = Mode.View;
+            }
+        }
+        public float Value
+        {
+            get => _value;
+            set
+            {
+                _value = value;
+                // if (Mode == Mode.View)
+                Update();
+            }
+        }
+
+        public Mode Mode { 
+            get => _mode; 
+            set {
+                Debug.Log($"Setting: {value}");
+                switch (value)
+                {
+                    case Mode.Max:
+                        Value = 100;
+                        break;
+                    case Mode.Min:
+                        Value = 0;
+                        break;
+                }
+                _mode = value;
+            } 
+        }
 
         public BoneController(Controller controller, string name)
         {
@@ -50,6 +92,7 @@ namespace Cubeage
                 Remove(x);
             }
         }
+
 
         public IEnumerable<Bone> GetValidBones()
         {
@@ -69,6 +112,7 @@ namespace Cubeage
                 }
             }
         }
+
 
         public void Add(Bone bone)
         {
@@ -115,6 +159,17 @@ namespace Cubeage
             Bones.Remove(bone);
         }
 
+        public void OnBeforeSerialize()
+        {
+        }
+
+
+        public void OnAfterDeserialize()
+        {
+            Value = _value;
+            Mode = _mode;
+            IsExpanded = _isExpanded;
+        }
     }
 
     public enum Mode

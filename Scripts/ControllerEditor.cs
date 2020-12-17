@@ -10,37 +10,6 @@ using System.Linq.Expressions;
 
 namespace Cubeage
 {
-
-    public class MyWindow : EditorWindow
-    {
-        string myString = "Hello World";
-        bool groupEnabled;
-        bool myBool = true;
-        float myFloat = 1.23f;
-
-        // Add menu named "My Window" to the Window menu
-        [MenuItem("Window/Cubeage")]
-        public static void Init()
-        {
-            // Get existing open window or if none, make a new one:
-            MyWindow window = (MyWindow)EditorWindow.GetWindow(typeof(MyWindow));
-            window.Show();
-        }
-
-        void OnGUI()
-        {
-            GUILayout.Label("Base Settings", EditorStyles.boldLabel);
-            myString = EditorGUILayout.TextField("Text Field", myString);
-
-            groupEnabled = EditorGUILayout.BeginToggleGroup("Optional Settings", groupEnabled);
-            myBool = EditorGUILayout.Toggle("Toggle", myBool);
-            myFloat = EditorGUILayout.Slider("Slider", myFloat, -3, 3);
-            EditorGUILayout.EndToggleGroup();
-        }
-    }
-
-
-
     [CustomEditor(typeof(Controller))]
     [CanEditMultipleObjects]
     public class ControllerEditor : Editor
@@ -71,14 +40,10 @@ namespace Cubeage
 
         public override void OnInspectorGUI()
         {
-
-            // if (Layout.Button("Window"))
-            // {
-            //     MyWindow.Init();
-            // }
             using (Layout.Horizontal())
             {
-                Layout.Object(controller, x => x.Avatar, "Target Avatar", UndoRecord("Set Avatar"));
+                Layout.Object(controller, x => x.Avatar, "Target Avatar")
+                    .ApplyChange(() => AddUndo("Set Avatar"));
             }
 
             using (Layout.Toolbar())
@@ -88,28 +53,31 @@ namespace Cubeage
                     AddUndo("Add Controller");
                     controller.AddController();
                 }
-                if (Layout.ToolbarButton("Reset"))
+                if (Layout.ToolbarButton("Debug"))
                 {
+
+                    Animator lAnimator = controller.gameObject.GetComponent<Animator>();
+                    Debug.Log(lAnimator);
+
+                    Transform lBoneTransform = lAnimator.GetBoneTransform(HumanBodyBones.LeftFoot);
+
+                    Debug.Log(lBoneTransform);
                 }
                 Layout.FlexibleSpace();
             }
+
             
             foreach (var currentController in controller.BoneControllers.ToArray())
             {
                 using (Layout.Horizontal())
                 {
-                    Layout.Foldout(currentController, x => x.isExpanded, UndoRecord("Toggle Controller")).OnChanged(x =>
-                    {
-                        if (!x) currentController.Mode = Mode.View;
-                    });
+                    Layout.Foldout(currentController, x => x.IsExpanded)
+                          .ApplyChange(() => AddUndo("Toggle Controller"));
                     Layout.Text(currentController, x => x.Name);
                     using (Layout.SetEnable(currentController.Mode == Mode.View))
                     {
-                        Layout.Slider(currentController, x => x.Value, 0, 100, UndoRecord("Slide Controller")).OnChanged(_ =>
-                        {
-                            if (currentController.Mode == Mode.View)
-                                currentController.Update();
-                        });
+                        Layout.Slider(currentController, x => x.Value, 0, 100)
+                            .ApplyChange(() => AddUndo("Slide Controller"));
                     }
                     if (DrawRemoveButton())
                     {
@@ -120,21 +88,23 @@ namespace Cubeage
                 }
 
 
-                if (currentController.isExpanded)
+                if (currentController.IsExpanded)
                 {
 
                     // Self implemented indent
                     using (Layout.Indent())
                     using (Layout.Box())
                     {
-                        Layout.EnumToolbar(currentController, x => x.Mode, UndoRecord("Change Mode"));
+                        Layout.EnumToolbar(currentController, x => x.Mode).ApplyChange(() => AddUndo("Change Mode"));
 
                         Layout.Label($"Bones ({currentController.Bones.Count})", EditorStyles.boldLabel);
                         foreach (var bone in currentController.GetValidBones())
                         {
                             using (Layout.Horizontal())
                             {
-                                Layout.Foldout(bone, x => x.isExpanded, UndoRecord("Expand Bone"));
+                                Layout.Foldout(bone, x => x.isExpanded)
+                                      .ApplyChange(() => AddUndo("Expand Bone"));
+
                                 using (Layout.SetEnable(false))
                                 {
                                     Layout.Object(bone.Part);
@@ -160,7 +130,7 @@ namespace Cubeage
                                             {
                                                 foreach (var direction in EnumHelper.GetValues<Direction>())
                                                 {
-                                                    DrawTransformController(bone, new Property(type, direction), currentController.Mode);
+                                                    DrawTransformController(bone, new Property(type, direction), currentController);
                                                 }
                                             }
                                         }
@@ -213,15 +183,20 @@ namespace Cubeage
 
         }
 
-        ActionRecord UndoRecord(string name)
-        {
-            return new ActionRecord(controller, name);
-        }
-
         void AddUndo(string name)
         {
             Undo.RecordObject(controller, name);
         }
+
+        void AddUndo(UnityEngine.Object target, string name)
+        {
+            Undo.RecordObject(target, name);
+        }
+        void AddUndo(UnityEngine.Object[] targets, string name)
+        {
+            Undo.RecordObjects(targets, name);
+        }
+
 
         bool Confirm(string message)
         {
@@ -236,32 +211,45 @@ namespace Cubeage
         /* 
          * Draw Transform Controller with toggle.
          */
-        void DrawTransformController(Bone bone, Property property, Mode mode)
+        void DrawTransformController(Bone bone, Property property, BoneController boneController)
         {
             var entry = bone.Properties[property];
-            if (mode == Mode.View)
+            if (boneController.Mode == Mode.View)
             {
                 using (Layout.SetEnable(entry.IsEnabled || bone.IsAvailable(property)))
                 {
-                    Layout.Toggle(entry, x => x.IsEnabled, UndoRecord("Toggle Property"));
+                    Layout.Toggle(entry.IsEnabled)
+                          .OnChanged(x =>
+                          {
+                              AddUndo("Toggle Property");
+                              bone.SetEnable(property, x);
+                          });
                 }
             }
 
-            using (Layout.SetEnable(mode != Mode.View && entry.IsEnabled))
+            using (Layout.SetEnable(boneController.Mode != Mode.View && entry.IsEnabled))
             {
                 float? minValue = null;
                 if (property.Type == TransformType.Scale)
                     minValue = 0.01f;
-                switch (mode)
+                switch (boneController.Mode)
                 {
                     case Mode.Min:
                         
-                        Layout.Float(entry, x => x.Min, property.Direction.ToString(), minValue, UndoRecord("Change Transform"))
-                              .OnChanged(x => bone.Transform(property, x));
+                        Layout.Float(entry, x => x.Min, property.Direction.ToString(), minValue)
+                            .OnChanged(x =>
+                            {
+                                AddUndo("Change Transform");
+                                bone.SetMin(property, x);
+                            });
                         break;
                     case Mode.Max:
-                        Layout.Float(entry, x => x.Max, property.Direction.ToString(), minValue, UndoRecord("Change Transform"))
-                              .OnChanged(x => bone.Transform(property, x));
+                        Layout.Float(entry, x => x.Max, property.Direction.ToString(), minValue)
+                            .OnChanged(x =>
+                            {
+                                AddUndo("Change Transform");
+                                bone.SetMax(property, x);
+                            });
                         break;
                     case Mode.View:
                         Layout.Float(bone.Transform(property), property.Direction.ToString());
@@ -270,55 +258,6 @@ namespace Cubeage
             }
         }
 
-
-    }
-
-
-
-    public class RectHelper
-    {
-        Rect origin;
-        Rect current;
-        float spacing;
-
-        public RectHelper(Rect origin, float spacing = 0)
-        {
-            this.origin = origin;
-            this.current = new Rect(origin.x, origin.y, origin.width, 0);
-            this.spacing = spacing;
-        }
-
-        public void Set(float height)
-        {
-            this.current.y = this.current.yMax + this.spacing;
-            this.current.height = height;
-        }
-
-        public Rect Get()
-        {
-            return this.current;
-        }
-        public Rect Get(float height)
-        {
-
-            this.Set(height);
-            return this.current;
-        }
-
-        public static explicit operator Rect(RectHelper helper)
-        {
-            return helper.Get();
-        }
-
-    }
-
-
-    public static class RechHelperExtensions
-    {
-        public static RectHelper ToHelper(this Rect rect)
-        {
-            return new RectHelper(rect, EditorGUIUtility.standardVerticalSpacing);
-        }
 
     }
 
@@ -353,41 +292,90 @@ namespace Cubeage
         }
     }
 
-    public class LayoutCallback<T>
+    public class LayoutPromise<TTarget, TValue>
     {
 
-        private readonly T oldValue;
-        private readonly T newValue;
-        private bool IsChanged { get => !newValue.Equals(oldValue); }
+        private TTarget Target { get; }
+        private Expression<Func<TTarget, TValue>> Expression { get; }
+        private TValue OldValue { get; set; }
+        private TValue NewValue { get; set; }
 
-        public LayoutCallback(T newValue, T oldValue)
+        public LayoutPromise(TTarget target, Expression<Func<TTarget, TValue>> expression, Func<TValue, TValue> func)
         {
-            this.newValue = newValue;
-            this.oldValue = oldValue;
+            Target = target;
+            Expression = expression;
+            OldValue = target.GetValue(expression);
+            NewValue = func(OldValue);
         }
 
-        public LayoutCallback<T> OnChanged(Action<T, T> action)
+
+        public LayoutPromise<TTarget, TValue> OnChanged(Action<TValue, TValue> action)
         {
-            if (IsChanged)
-                action(newValue, oldValue);
+            if (!NewValue.Equals(OldValue))
+                action(NewValue, OldValue);
             return this;
         }
 
-        public LayoutCallback<T> OnChanged(Action<T> action)
+        public LayoutPromise<TTarget, TValue> OnChanged(Action<TValue> action)
         {
             return OnChanged((x, _) => action(x));
         }
 
-        public LayoutCallback<T> OnChanged(Action action)
+        public LayoutPromise<TTarget, TValue> OnChanged(Action action)
         {
             return OnChanged(_ => action());
         }
 
-        public LayoutCallback<T> OnBeforeChanged(Action action)
+        public LayoutPromise<TTarget, TValue> ApplyChange()
         {
-            if (IsChanged)
-                action();
+            if (!NewValue.Equals(OldValue))
+                Target.SetValue(Expression, NewValue);
             return this;
+        }
+
+        public LayoutPromise<TTarget, TValue> ApplyChange(Action action)
+        {
+            return OnChanged(action).ApplyChange();
+        }
+        public LayoutPromise<TTarget, TValue> ApplyChange(Action<TValue> action)
+        {
+            return OnChanged(action).ApplyChange();
+        }
+        public LayoutPromise<TTarget, TValue> ApplyChange(Action<TValue, TValue> action)
+        {
+            return OnChanged(action).ApplyChange();
+        }
+
+    }
+
+    public class LayoutPromise<TValue>
+    {
+
+        private TValue OldValue { get; set; }
+        private TValue NewValue { get; set; }
+
+        public LayoutPromise(TValue oldValue, Func<TValue, TValue> func)
+        {
+            OldValue = oldValue;
+            NewValue = func(OldValue);
+        }
+
+
+        public LayoutPromise<TValue> OnChanged(Action<TValue, TValue> action)
+        {
+            if (!NewValue.Equals(OldValue))
+                action(NewValue, OldValue);
+            return this;
+        }
+
+        public LayoutPromise<TValue> OnChanged(Action<TValue> action)
+        {
+            return OnChanged((x, _) => action(x));
+        }
+
+        public LayoutPromise<TValue> OnChanged(Action action)
+        {
+            return OnChanged(_ => action());
         }
     }
 
@@ -470,62 +458,6 @@ namespace Cubeage
             }
         }
 
-        public static LayoutCallback<bool> Toggle<T>(T target, Expression<Func<T, bool>> expression, ActionRecord record = null)
-        {
-            return Callback(target, expression, x => EditorGUILayout.Toggle(x, GUILayout.Width(15)), record);
-        }
-
-        public static LayoutCallback<bool> Foldout<T>(T target, Expression<Func<T, bool>> expression, ActionRecord record = null)
-        {
-            return Callback(target, expression, x => EditorGUILayout.Toggle(x, new GUIStyle(EditorStyles.foldout), GUILayout.Width(14)), record);
-        }
-
-
-        public static LayoutCallback<float> Float<T>(T target, Expression<Func<T, float>> expression, string label = null, float? minValue = null, ActionRecord record = null)
-        {
-            return Callback(target, expression, x =>
-            {
-                var value = Float(x, label);
-                if (minValue.HasValue)
-                    value = Math.Max(minValue.Value, value);
-                return value;
-            }, record);
-        }
-
-        public static float Float(float value, string label = null)
-        {
-            return EditorGUILayout.FloatField(label, value);
-        }
-
-        public static LayoutCallback<T> Object<TTarget, T>(TTarget target, Expression<Func<TTarget, T>> expression, string label = null, ActionRecord record = null) where T : UnityEngine.Object
-        {
-            return Callback(target, expression, x => Object(x, label), record);
-        }
-
-        public static T Object<T>(T value = null, string label = null) where T : UnityEngine.Object
-        {
-            return (T)EditorGUILayout.ObjectField(label, value, typeof(T), true);
-        }
-
-        public static LayoutCallback<T> EnumToolbar<TTarget, T>(TTarget target, Expression<Func<TTarget, T>> expression, ActionRecord record = null) where T : Enum
-        {
-            
-            return Callback(target, expression, x => GUILayout.Toolbar(x.GetValue(), EnumHelper.GetValues<T>()
-                                                                                            .Select(y => y.ToString())
-                                                                                            .ToArray())
-                                                           .ToEnum<T>(), record);
-        }
-
-        public static LayoutCallback<float> Slider<T>(T target, Expression<Func<T, float>> expression, float leftValue, float rightValue, ActionRecord record = null)
-        {
-            return Callback(target, expression, x => EditorGUILayout.Slider(x, leftValue, rightValue), record);
-        }
-
-        public static LayoutCallback<string> Text<T>(T target, Expression<Func<T, string>> expression, ActionRecord record = null)
-        {
-            return Callback(target, expression, x => EditorGUILayout.TextField(x), record);
-        }
-
         public static bool Button(string label)
         {
             return GUILayout.Button(label);
@@ -535,7 +467,71 @@ namespace Cubeage
         {
             GUILayout.FlexibleSpace();
         }
+
+
+        public static LayoutPromise<bool> Toggle(bool value)
+        {
+            return new LayoutPromise<bool>(value, x => EditorGUILayout.Toggle(x, GUILayout.Width(15)));
+        }
+
+        public static LayoutPromise<T, bool> Toggle<T>(T target, Expression<Func<T, bool>> expression)
+        {
+            return new LayoutPromise<T, bool>(target, expression, x => EditorGUILayout.Toggle(x, GUILayout.Width(15)));
+        }
+
+        public static LayoutPromise<T, bool> Foldout<T>(T target, Expression<Func<T, bool>> expression)
+        {
+            return new LayoutPromise<T, bool>(target, expression, x => EditorGUILayout.Toggle(x, new GUIStyle(EditorStyles.foldout), GUILayout.Width(14)));
+        }
+
+
+        public static LayoutPromise<T, float> Float<T>(T target, Expression<Func<T, float>> expression, string label = null, float? minValue = null)
+        {
+            return new LayoutPromise<T, float>(target, expression, x =>
+            {
+                var value = Float(x, label);
+                if (minValue.HasValue)
+                    value = Math.Max(minValue.Value, value);
+                return value;
+            });
+        }
+
+
+        // Need refactor
+        public static float Float(float value, string label = null)
+        {
+            return EditorGUILayout.FloatField(label, value);
+        }
+
+        public static T Object<T>(T value = null, string label = null) where T : UnityEngine.Object
+        {
+            return (T)EditorGUILayout.ObjectField(label, value, typeof(T), true);
+        }
+
+        public static LayoutPromise<TTarget, TValue> Object<TTarget, TValue>(TTarget target, Expression<Func<TTarget, TValue>> expression, string label = null) where TValue : UnityEngine.Object
+        {
+            return new LayoutPromise<TTarget, TValue>(target, expression, x => Object(x, label));
+        }
+
+        public static LayoutPromise<TTarget, TValue> EnumToolbar<TTarget, TValue>(TTarget target, Expression<Func<TTarget, TValue>> expression) where TValue : Enum
+        {
             
+            return new LayoutPromise<TTarget, TValue>(target, expression, x => GUILayout.Toolbar(x.GetValue(), EnumHelper.GetValues<TValue>()
+                                                                                            .Select(y => y.ToString())
+                                                                                            .ToArray())
+                                                           .ToEnum<TValue>());
+        }
+
+        public static LayoutPromise<T, float> Slider<T>(T target, Expression<Func<T, float>> expression, float leftValue, float rightValue)
+        {
+            return new LayoutPromise<T, float>(target, expression, x => EditorGUILayout.Slider(x, leftValue, rightValue));
+        }
+
+        public static LayoutPromise<T, string> Text<T>(T target, Expression<Func<T, string>> expression)
+        {
+            return new LayoutPromise<T, string>(target, expression, x => EditorGUILayout.TextField(x));
+        }
+
         public static void Label(string label, GUIStyle style = null)
         {
             if (style != null)
@@ -548,29 +544,5 @@ namespace Cubeage
             }
         }
 
-        private static LayoutCallback<T> Callback<TTarget, T>(TTarget target, Expression<Func<TTarget, T>> expression, Func<T, T> layoutGenerator, ActionRecord record = null)
-        {
-            //var selector = expression.Compile();
-            var oldValue = target.GetValue(expression);
-            var newValue = layoutGenerator(oldValue);
-
-            return new LayoutCallback<T>(newValue, oldValue).OnChanged(x =>
-            {
-                Undo.RecordObject(record.Target, record.ActionName);
-                target.SetValue(expression, x);
-            });
-        }
-    }
-
-    public class ActionRecord
-    {
-        public UnityEngine.Object Target { get; }
-        public string ActionName { get; }
-
-        public ActionRecord(UnityEngine.Object target, string actionName)
-        {
-            Target = target;
-            ActionName = actionName;
-        }
     }
 }
