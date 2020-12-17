@@ -2,8 +2,8 @@
 {
     public enum Mode
     {
-        View,
         Min,
+        View,
         Max
     }
 

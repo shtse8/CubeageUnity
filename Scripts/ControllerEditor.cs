@@ -106,15 +106,12 @@ namespace Cubeage
                               currentController.IsExpanded = x;
                           });
                     Layout.Text(currentController.Name);
-                    using (Layout.SetEnable(currentController.Mode == Mode.View))
-                    {
-                        Layout.Slider(currentController.Value, 0, 100)
-                            .OnChanged(x =>
-                            {
-                                AddUndo("Slide Controller");
-                                currentController.Value = x;
-                            });
-                    }
+                    Layout.Slider(currentController.Value, 0, 100)
+                        .OnChanged(x =>
+                        {
+                            AddUndo("Slide Controller");
+                            currentController.Value = x;
+                        });
                     if (DrawRemoveButton())
                     {
                         AddUndo("Remove Bone");

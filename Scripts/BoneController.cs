@@ -15,14 +15,21 @@ namespace Cubeage
         
         public float DefaultValue = 50;
 
-        private bool _isExpanded = false;
+        [SerializeField]
         private float _value = 50;
+
+        [SerializeField]
         private Mode _mode = Mode.View;
 
+        [SerializeField]
+        private bool _isExpanded = false;
         public bool IsExpanded
         {
             get => _isExpanded;
-            set {
+            set
+            {
+                if (Equals(_isExpanded, value))
+                    return;
                 _isExpanded = value;
                 if (!value)
                     Mode = Mode.View;
@@ -33,16 +40,25 @@ namespace Cubeage
             get => _value;
             set
             {
+                if (Equals(_value, value))
+                    return;
                 _value = value;
-                // if (Mode == Mode.View)
+                if (value == 100)
+                    Mode = Mode.Max;
+                else if (value == 0)
+                    Mode = Mode.Min;
+                else
+                    Mode = Mode.View;
                 Update();
             }
         }
 
         public Mode Mode { 
             get => _mode; 
-            set {
-                Debug.Log($"Setting: {value}");
+            set
+            {
+                if (Equals(_mode, value))
+                    return;
                 switch (value)
                 {
                     case Mode.Max:
