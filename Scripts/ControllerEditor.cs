@@ -142,7 +142,7 @@ namespace Cubeage
                         using (Layout.Indent())
                         using (Layout.Horizontal())
                         {
-                            var newControllerPart = Layout.Object<ControllerPart>();
+                            var newControllerPart = Layout.Object<Transform>();
                             if (newControllerPart != null)
                             {
                                 try
