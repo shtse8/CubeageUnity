@@ -11,11 +11,12 @@ namespace Cubeage
     {
     }
 
+
     [Serializable]
     public class Bone
     {
-        public BoneController BoneController;
-        public ControllerPart Part;
+        [SerializeReference] public BoneController BoneController;
+        [SerializeReference] public ControllerPart Part;
         public SerializableDictionary<Property, Entry> Properties = new SerializableDictionary<Property, Entry>();
         public bool isExpanded = false;
 

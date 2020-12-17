@@ -53,7 +53,11 @@ namespace Cubeage
         }
         public float Value
         {
-            get => _value;
+            get
+            {
+                Debug.Log(_value);
+                return _value;
+            }
             set
             {
                 _value = value;
@@ -166,9 +170,7 @@ namespace Cubeage
 
         public void OnAfterDeserialize()
         {
-            Value = _value;
-            Mode = _mode;
-            IsExpanded = _isExpanded;
+            Update();
         }
     }
 
