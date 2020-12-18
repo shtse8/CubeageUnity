@@ -4,9 +4,7 @@ using UnityEditorInternal;
 using System.Collections;
 using System.Collections.Generic;
 using System;
-using System.Linq;
 using System.Reflection;
-using System.Linq.Expressions;
 
 namespace Cubeage
 {
@@ -15,6 +13,7 @@ namespace Cubeage
     public class ControllerEditor : Editor
     {
         bool showAllValidBones = false;
+        string message = "";
         Controller controller;
         // Dictionary<ControllerPart, bool> isExpandedStates = new Dictionary<ControllerPart, bool>();
 
@@ -38,6 +37,7 @@ namespace Cubeage
 
         public override void OnInspectorGUI()
         {
+            /*
             using (Layout.Horizontal())
             {
                 Layout.Label("Target Avatar");
@@ -48,6 +48,7 @@ namespace Cubeage
                         controller.Avatar = x;
                     });
             }
+            */
 
             using (Layout.Horizontal())
             using (Layout.Box())
@@ -65,7 +66,19 @@ namespace Cubeage
                         foreach (var bone in controller.ValidBones.Keys)
                         {
                             using (Layout.Horizontal())
+                            {
                                 Layout.Label(bone.name);
+                                if (controller.TryGetTargetTransform(bone, out var target))
+                                {
+                                    Layout.Label(target.name);
+                                } else
+                                {
+                                    using (Layout.Color(Color.red))
+                                    {
+                                        Layout.Label("Missing!");
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -81,7 +94,13 @@ namespace Cubeage
                 }
                 if (Layout.ToolbarButton("Reset"))
                 {
+                    AddUndo("Reset All Bones");
                     controller.ResetBones();
+                }
+                if (Layout.ToolbarButton("Default"))
+                {
+                    AddUndo("Set All Controller To Default");
+                    controller.SetToDefault();
                 }
                 if (Layout.ToolbarButton("Debug"))
                 {
@@ -138,13 +157,30 @@ namespace Cubeage
                     using (Layout.Indent())
                     using (Layout.Box())
                     {
+                        using (Layout.Toolbar())
+                        {
+                            if (Layout.ToolbarButton("Reset"))
+                            {
+                                AddUndo("Reset Controller");
+                                currentController.SetToDefault();
+                                message = "Reset to Default.";
+                            }
+                            if (Layout.ToolbarButton("Set Default"))
+                            {
+                                AddUndo("Set Controller Default");
+                                currentController.SetDefault();
+                                message = "Set Default Done.";
+                            }
+                            Layout.FlexibleSpace();
+                            Layout.Label(message);
+                        }
                         Layout.EnumToolbar(currentController.Mode).OnChanged(x =>
                         {
                             AddUndo("Change Mode");
                             currentController.Mode = x;
                         });
 
-                        Layout.Label($"Bones ({currentController.Bones.Count})", EditorStyles.boldLabel);
+                        Layout.Label($"Bones ({currentController.Bones.Count})");
                         foreach (var bone in currentController.GetValidBones())
                         {
                             using (Layout.Horizontal())
@@ -180,11 +216,13 @@ namespace Cubeage
                             {
                                 using (Layout.Indent())
                                 {
+
+
                                     foreach (var type in EnumHelper.GetValues<TransformType>())
                                     {
                                         using (Layout.Horizontal())
                                         {
-                                            Layout.Label(type.ToString());
+                                            Layout.Label(type.ToString(), GUILayout.MinWidth(50));
                                             using (Layout.SetLabelWidth(10))
                                             {
                                                 foreach (var direction in EnumHelper.GetValues<Direction>())
@@ -216,24 +254,6 @@ namespace Cubeage
                                     }
                                 }
                             });
-                        }
-
-
-                        using (Layout.Horizontal())
-                        {
-                            Layout.FlexibleSpace();
-                            if (Layout.Button("Reset"))
-                            {
-                                AddUndo("Reset Controller");
-                                currentController.Reset();
-                            }
-
-                            if (Layout.Button("Set Default"))
-                            {
-                                AddUndo("Set Controller Default");
-                                currentController.SetDefault();
-                            }
-                            Layout.FlexibleSpace();
                         }
                     }
                 }
@@ -288,51 +308,38 @@ namespace Cubeage
                 float? minValue = null;
                 if (property.Type == TransformType.Scale)
                     minValue = 0.01f;
-                if (entry.IsEnabled)
+                var value = entry.Value;
+                switch (boneController.Mode)
                 {
-                    switch (boneController.Mode)
-                    {
-                        case Mode.Min:
-
-                            Layout.Float(entry.Min, property.Direction.ToString(), minValue)
-                                .OnChanged(x =>
-                                {
-                                    AddUndo("Change Transform");
-                                    entry.Min = x;
-                                });
-                            break;
-                        case Mode.Max:
-                            Layout.Float(entry.Max, property.Direction.ToString(), minValue)
-                                .OnChanged(x =>
-                                {
-                                    AddUndo("Change Transform");
-                                    entry.Max = x;
-                                });
-                            break;
-                        case Mode.View:
-                            Layout.Float(entry.Value, property.Direction.ToString());
-                            break;
-                    }
-                } 
-                else
+                    case Mode.Min:
+                        value = entry.Min;
+                        break;
+                    case Mode.Max:
+                        value = entry.Max;
+                        break;
+                }
+                var floatField = Layout.Float(value, property.Direction.ToString(), minValue, GUILayout.MinWidth(20));
+                switch (boneController.Mode)
                 {
-                    Layout.Float(entry.Value, property.Direction.ToString());
+                    case Mode.Min:
+                        floatField.OnChanged(x =>
+                            {
+                                AddUndo("Change Transform");
+                                entry.Min = x;
+                            });
+                        break;
+                    case Mode.Max:
+                        floatField.OnChanged(x =>
+                            {
+                                AddUndo("Change Transform");
+                                entry.Max = x;
+                            });
+                        break;
                 }
             }
         }
 
 
-    }
-
-
-    public class DisplayAttribute : Attribute
-    {
-        public DisplayAttribute(string name)
-        {
-            Name = name;
-        }
-
-        public string Name { get; }
     }
 
     public class Disposable : IDisposable
@@ -353,249 +360,5 @@ namespace Cubeage
         {
             return new Disposable(action);
         }
-    }
-
-    public class LayoutPromise<TTarget, TValue>
-    {
-
-        private TTarget Target { get; }
-        private Expression<Func<TTarget, TValue>> Expression { get; }
-        private TValue OldValue { get; set; }
-        private TValue NewValue { get; set; }
-
-        public LayoutPromise(TTarget target, Expression<Func<TTarget, TValue>> expression, Func<TValue, TValue> func)
-        {
-            Target = target;
-            Expression = expression;
-            OldValue = target.GetValue(expression);
-            NewValue = func(OldValue);
-        }
-
-
-        public LayoutPromise<TTarget, TValue> OnChanged(Action<TValue, TValue> action)
-        {
-            if (!NewValue.Equals(OldValue))
-                action(NewValue, OldValue);
-            return this;
-        }
-
-        public LayoutPromise<TTarget, TValue> OnChanged(Action<TValue> action)
-        {
-            return OnChanged((x, _) => action(x));
-        }
-
-        public LayoutPromise<TTarget, TValue> OnChanged(Action action)
-        {
-            return OnChanged(_ => action());
-        }
-
-        public LayoutPromise<TTarget, TValue> ApplyChange()
-        {
-            if (!NewValue.Equals(OldValue))
-                Target.SetValue(Expression, NewValue);
-            return this;
-        }
-
-        public LayoutPromise<TTarget, TValue> ApplyChange(Action action)
-        {
-            return OnChanged(action).ApplyChange();
-        }
-        public LayoutPromise<TTarget, TValue> ApplyChange(Action<TValue> action)
-        {
-            return OnChanged(action).ApplyChange();
-        }
-        public LayoutPromise<TTarget, TValue> ApplyChange(Action<TValue, TValue> action)
-        {
-            return OnChanged(action).ApplyChange();
-        }
-
-    }
-
-    public class LayoutPromise<TValue>
-    {
-
-        private TValue OldValue { get; set; }
-        private TValue NewValue { get; set; }
-
-        public LayoutPromise(TValue oldValue, Func<TValue, TValue> func)
-        {
-            OldValue = oldValue;
-            NewValue = func(OldValue);
-        }
-
-
-        public LayoutPromise<TValue> OnChanged(Action<TValue, TValue> action)
-        {
-            if (!Equals(NewValue, OldValue))
-                action(NewValue, OldValue);
-            return this;
-        }
-
-        public LayoutPromise<TValue> OnChanged(Action<TValue> action)
-        {
-            return OnChanged((x, _) => action(x));
-        }
-
-        public LayoutPromise<TValue> OnChanged(Action action)
-        {
-            return OnChanged(_ => action());
-        }
-    }
-
-    public class Layout
-    {
-
-
-        public static IDisposable SetEnable(bool isEnabled)
-        {
-            var oldValue = GUI.enabled;
-            GUI.enabled = isEnabled;
-            return Disposable.Create(() => GUI.enabled = oldValue);
-        }
-
-        public static IDisposable SetLabelWidth(float value)
-        {
-            var oldValue = EditorGUIUtility.labelWidth;
-            EditorGUIUtility.labelWidth = value;
-            return Disposable.Create(() => EditorGUIUtility.labelWidth = oldValue);
-        }
-
-        public static IDisposable Box()
-        {
-            return new GUILayout.VerticalScope(new GUIStyle(EditorStyles.helpBox));
-        }
-
-        public static IDisposable Indent()
-        {
-            var cHorizontalScope = new GUILayout.HorizontalScope();
-            GUILayout.Space(20f);
-
-            // Color[] pix = new Color[] { Color.white };
-            // Texture2D result = new Texture2D(1, 1);
-            // result.SetPixels(pix);
-            // result.Apply();
-            var cVerticalScope = new GUILayout.VerticalScope();
-            return Disposable.Create(() =>
-            {
-                cVerticalScope.Dispose();
-                cHorizontalScope.Dispose();
-            });
-        }
-
-        public static IDisposable Toolbar()
-        {
-            var disposable = new GUILayout.HorizontalScope("Toolbar", GUILayout.ExpandWidth(true));
-            return Disposable.Create(() =>
-            {
-                disposable.Dispose();
-                Space();
-            });
-        }
-
-        public static bool ToolbarButton(string label)
-        {
-            return GUILayout.Button(label, "ToolbarButton");
-        }
-
-        public static void Space()
-        {
-            EditorGUILayout.Space();
-        }
-
-        public static IDisposable Horizontal()
-        {
-            var disposable = new GUILayout.HorizontalScope();
-            return Disposable.Create(() =>
-            {
-                disposable.Dispose();
-            });
-        }
-
-        public static void Line(float height = 1)
-        {
-            using (Horizontal())
-            {
-                Rect rect = EditorGUILayout.GetControlRect(false, height);
-                rect.height = height;
-                EditorGUI.DrawRect(rect, new Color(0f, 0f, 0f, 0.5f));
-            }
-        }
-
-        public static bool Button(string label)
-        {
-            return GUILayout.Button(label);
-        }
-
-        public static void FlexibleSpace()
-        {
-            GUILayout.FlexibleSpace();
-        }
-
-
-        public static LayoutPromise<bool> Toggle(bool value)
-        {
-            return new LayoutPromise<bool>(value, x => EditorGUILayout.Toggle(x, GUILayout.Width(15)));
-        }
-
-        public static LayoutPromise<bool> Foldout(bool value)
-        {
-            return new LayoutPromise<bool>(value, x => EditorGUILayout.Toggle(x, new GUIStyle(EditorStyles.foldout), GUILayout.Width(14)));
-        }
-
-        public static void Space(float width)
-        {
-            // EditorGUILayout.Space(width, false);
-            EditorGUILayout.LabelField("", GUILayout.Width(width));
-        }
-
-        public static LayoutPromise<float> Float(float value, string label = null, float? minValue = null)
-        {
-            return new LayoutPromise<float>(value, x =>
-            {
-                var newValue = EditorGUILayout.FloatField(label, x);
-                if (minValue.HasValue)
-                    newValue = Math.Max(minValue.Value, newValue);
-                return newValue;
-            });
-        }
-
-
-        public static LayoutPromise<T> Object<T>(T value) where T : UnityEngine.Object
-        {
-            
-            return new LayoutPromise<T>(value, x => (T)EditorGUILayout.ObjectField(value, typeof(T), true));
-        }
-
-        public static LayoutPromise<T> EnumToolbar<T>(T value) where T : Enum
-        {
-            
-            return new LayoutPromise<T>(value, x => GUILayout.Toolbar(x.GetValue(), EnumHelper.GetValues<T>()
-                                                                                            .Select(y => y.ToString())
-                                                                                            .ToArray())
-                                                           .ToEnum<T>());
-        }
-
-        public static LayoutPromise<float> Slider(float value, float leftValue, float rightValue)
-        {
-            return new LayoutPromise<float>(value, x => EditorGUILayout.Slider(x, leftValue, rightValue));
-        }
-
-        public static LayoutPromise<string> Text(string value)
-        {
-            return new LayoutPromise<string>(value, x => EditorGUILayout.TextField(x));
-        }
-
-        public static void Label(string label, GUIStyle style = null)
-        {
-            if (style != null)
-            {
-                EditorGUILayout.LabelField(label, style);
-            }
-            else
-            {
-                EditorGUILayout.LabelField(label);
-            }
-        }
-
     }
 }

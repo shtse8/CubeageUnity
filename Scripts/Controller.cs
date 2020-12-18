@@ -41,6 +41,36 @@ namespace Cubeage
             Avatar = gameObject;
         }
 
+        public bool HasAnimator()
+        {
+            return gameObject.GetComponent<Animator>();
+            // foreach(var x  in controller.BoneControllers[0].Bones[0].Properties)
+            // {
+            //     Debug.Log(x.Key, x.Value);
+            // }
+            // Animator lAnimator = controller.gameObject.GetComponent<Animator>();
+            // Debug.Log(lAnimator);
+            // 
+            // Transform lBoneTransform = lAnimator.GetBoneTransform(HumanBodyBones.LeftFoot);
+            // 
+            // Debug.Log(lBoneTransform);
+        }
+
+        public bool TryGetTargetTransform(Transform transform, out Transform target)
+        {
+            target = null;
+            for(var i = 0; i < transform.childCount; i++)
+            {
+                var child = transform.GetChild(i);
+                if (Equals(child.name + "_bc", transform.name))
+                {
+                    target = child;
+                    return true;
+                }
+            }
+            return false;
+        }
+
         void UpdateValidBones()
         {
             ValidBones.Clear();
@@ -81,6 +111,14 @@ namespace Cubeage
             foreach ((var controller, var isEnabled) in dict)
             {
                 controller.IsEnabled = isEnabled;
+            }
+        }
+
+        public void SetToDefault()
+        {
+            foreach(var controller in BoneControllers)
+            {
+                controller.SetToDefault();
             }
         }
 

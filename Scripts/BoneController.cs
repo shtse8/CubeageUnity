@@ -174,7 +174,7 @@ namespace Cubeage
             DefaultValue = Value;
         }
 
-        public void Reset()
+        public void SetToDefault()
         {
             Value = DefaultValue;
         }

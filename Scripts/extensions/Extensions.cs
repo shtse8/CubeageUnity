@@ -22,13 +22,7 @@ namespace Cubeage
             key = kvp.Key;
             value = kvp.Value;
         }
-        public static string GetDisplayValue<T>(this T value)
-        {
-            return value.GetType().GetMember(value.ToString())
-                       .First()
-                       .GetCustomAttribute<DisplayAttribute>()
-                       .Name;
-        }
+
         public static TValue GetValue<T, TValue>(this T target, Expression<Func<T, TValue>> memberLamda)
         {
             if (memberLamda.Body is MemberExpression memberSelectorExpression)
