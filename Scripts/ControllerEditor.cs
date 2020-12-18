@@ -122,12 +122,14 @@ namespace Cubeage
                             AddUndo("Slide Controller");
                             currentController.Value = x;
                         });
+                    /*
                     if (DrawRemoveButton())
                     {
                         AddUndo("Remove Bone");
                         controller.BoneControllers.Remove(currentController);
                         continue;
                     }
+                    */
                 }
 
 
@@ -164,12 +166,14 @@ namespace Cubeage
                                 {
                                     Layout.Object(bone.Part);
                                 }
+                                /*
                                 if (DrawRemoveButton())
                                 {
                                     AddUndo("Remove Bone");
                                     currentController.Remove(bone);
                                     continue;
                                 }
+                                */
                             }
 
                             if (bone.isExpanded)
@@ -212,29 +216,24 @@ namespace Cubeage
                                     }
                                 }
                             });
-                            Layout.Space(18);
                         }
 
 
-                        if (currentController.Mode == Mode.View)
+                        using (Layout.Horizontal())
                         {
-
-                            using (Layout.Horizontal())
+                            Layout.FlexibleSpace();
+                            if (Layout.Button("Reset"))
                             {
-                                Layout.FlexibleSpace();
-                                if (Layout.Button("Reset"))
-                                {
-                                    AddUndo("Reset Controller");
-                                    currentController.Reset();
-                                }
-
-                                if (Layout.Button("Set Default"))
-                                {
-                                    AddUndo("Set Controller Default");
-                                    currentController.SetDefault();
-                                }
-                                Layout.FlexibleSpace();
+                                AddUndo("Reset Controller");
+                                currentController.Reset();
                             }
+
+                            if (Layout.Button("Set Default"))
+                            {
+                                AddUndo("Set Controller Default");
+                                currentController.SetDefault();
+                            }
+                            Layout.FlexibleSpace();
                         }
                     }
                 }
@@ -545,7 +544,8 @@ namespace Cubeage
 
         public static void Space(float width)
         {
-            EditorGUILayout.Space(width, false);
+            // EditorGUILayout.Space(width, false);
+            EditorGUILayout.LabelField("", GUILayout.Width(width));
         }
 
         public static LayoutPromise<float> Float(float value, string label = null, float? minValue = null)
