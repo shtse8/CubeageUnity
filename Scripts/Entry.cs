@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using System;
 using System.Collections.Generic;
+using UnityEditor;
 
 namespace Cubeage
 {
@@ -10,6 +11,7 @@ namespace Cubeage
         [SerializeReference]
         protected Bone Bone;
 
+        [SerializeField]
         protected Property Property;
 
         [SerializeField]
@@ -78,6 +80,7 @@ namespace Cubeage
                     TransformCounterBones(Property, change);
 
                     var partValue = GetValue(Bone.Part, change);
+                    Undo.RecordObject(Bone.Part.transform, "");
                     Bone.Part.transform.Set(Property, partValue);
 
                     _value = value;
@@ -150,6 +153,7 @@ namespace Cubeage
             foreach (var part in SearchBonesRecursive(Bone.Part))
             {
                 var newValue = GetValue(part, property, change);
+                Undo.RecordObject(part.transform, "");
                 part.transform.Set(property, newValue);
             }
         }

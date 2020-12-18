@@ -19,6 +19,8 @@ namespace Cubeage
         {
             return new Property(tuple.Item1, tuple.Item2);
         }
+
+        public override string ToString() => $"{Type}{Direction}";
     }
 
 }

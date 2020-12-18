@@ -88,13 +88,16 @@ namespace Cubeage
                 }
                 if (Layout.ToolbarButton("Debug"))
                 {
-
-                    Animator lAnimator = controller.gameObject.GetComponent<Animator>();
-                    Debug.Log(lAnimator);
-
-                    Transform lBoneTransform = lAnimator.GetBoneTransform(HumanBodyBones.LeftFoot);
-
-                    Debug.Log(lBoneTransform);
+                    foreach(var x  in controller.BoneControllers[0].Bones[0].Properties)
+                    {
+                        Debug.Log(x.Key);
+                    }
+                    // Animator lAnimator = controller.gameObject.GetComponent<Animator>();
+                    // Debug.Log(lAnimator);
+                    // 
+                    // Transform lBoneTransform = lAnimator.GetBoneTransform(HumanBodyBones.LeftFoot);
+                    // 
+                    // Debug.Log(lBoneTransform);
                 }
                 Layout.FlexibleSpace();
             }
@@ -239,6 +242,7 @@ namespace Cubeage
 
         void AddUndo(string name)
         {
+            Undo.SetCurrentGroupName(name);
             Undo.RecordObject(controller, name);
         }
 
