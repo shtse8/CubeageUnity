@@ -28,14 +28,10 @@ namespace Cubeage
             return GUILayout.Button("x", new GUIStyle(GUI.skin.label)
             {
                 fixedWidth = EditorGUIUtility.singleLineHeight,
-                fixedHeight = EditorGUIUtility.singleLineHeight,
-                fontSize = (int)(EditorGUIUtility.singleLineHeight * 0.8),
-                alignment = TextAnchor.MiddleCenter,
                 hover = new GUIStyleState()
                 {
                     textColor = Color.red
-                },
-                margin = new RectOffset(0, 0, 0, 0)
+                }
             }) && Confirm("Are you sure want to remove?");
         }
 
@@ -44,7 +40,8 @@ namespace Cubeage
         {
             using (Layout.Horizontal())
             {
-                Layout.Object(controller.Avatar, "Target Avatar")
+                Layout.Label("Target Avatar");
+                Layout.Object(controller.Avatar)
                     .OnChanged(x =>
                     {
                         AddUndo("Set Avatar");
@@ -109,7 +106,7 @@ namespace Cubeage
                 {
                     Layout.Foldout(currentController.IsExpanded)
                           .OnChanged(x => {
-                              AddUndo("Toggle Controller");
+                              AddUndo("Expand Controller");
                               currentController.IsExpanded = x;
                           });
                     Layout.Toggle(currentController.IsEnabled)
@@ -136,8 +133,6 @@ namespace Cubeage
 
                 if (currentController.IsExpanded)
                 {
-
-                    // Self implemented indent
                     using (Layout.Indent())
                     using (Layout.Box())
                     {
@@ -159,6 +154,12 @@ namespace Cubeage
                                         bone.isExpanded = x;
                                     });
 
+                                Layout.Toggle(bone.IsEnabled)
+                                        .OnChanged(x =>
+                                        {
+                                            AddUndo("Toggle Bone");
+                                            bone.IsEnabled = x;
+                                        });
                                 using (Layout.SetEnable(false))
                                 {
                                     Layout.Object(bone.Part);
@@ -193,9 +194,9 @@ namespace Cubeage
                             }
                         }
 
-                        using (Layout.Indent())
                         using (Layout.Horizontal())
                         {
+                            Layout.Space(32);
                             Layout.Object<Transform>(null).OnChanged(x =>
                             {
                                 if (x != null)
@@ -211,6 +212,7 @@ namespace Cubeage
                                     }
                                 }
                             });
+                            Layout.Space(18);
                         }
 
 
@@ -444,6 +446,7 @@ namespace Cubeage
     public class Layout
     {
 
+
         public static IDisposable SetEnable(bool isEnabled)
         {
             var oldValue = GUI.enabled;
@@ -502,11 +505,10 @@ namespace Cubeage
 
         public static IDisposable Horizontal()
         {
-            var disposable = new GUILayout.HorizontalScope(GUILayout.ExpandWidth(true));
+            var disposable = new GUILayout.HorizontalScope();
             return Disposable.Create(() =>
             {
                 disposable.Dispose();
-                Space();
             });
         }
 
@@ -541,6 +543,11 @@ namespace Cubeage
             return new LayoutPromise<bool>(value, x => EditorGUILayout.Toggle(x, new GUIStyle(EditorStyles.foldout), GUILayout.Width(14)));
         }
 
+        public static void Space(float width)
+        {
+            EditorGUILayout.Space(width, false);
+        }
+
         public static LayoutPromise<float> Float(float value, string label = null, float? minValue = null)
         {
             return new LayoutPromise<float>(value, x =>
@@ -553,9 +560,10 @@ namespace Cubeage
         }
 
 
-        public static LayoutPromise<T> Object<T>(T value, string label = null) where T : UnityEngine.Object
+        public static LayoutPromise<T> Object<T>(T value) where T : UnityEngine.Object
         {
-            return new LayoutPromise<T>(value, x => (T)EditorGUILayout.ObjectField(label, value, typeof(T), true));
+            
+            return new LayoutPromise<T>(value, x => (T)EditorGUILayout.ObjectField(value, typeof(T), true));
         }
 
         public static LayoutPromise<T> EnumToolbar<T>(T value) where T : Enum

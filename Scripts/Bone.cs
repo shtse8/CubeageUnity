@@ -28,6 +28,28 @@ namespace Cubeage
             }
         }
 
+        [SerializeField]
+        private bool _isEnabled = true;
+
+        public bool IsEnabled
+        {
+            get => _isEnabled;
+            set
+            {
+                if (Equals(_isEnabled, value))
+                    return;
+
+                _isEnabled = value;
+
+                // Update Entries
+                foreach (var entry in Properties.Values.Where(x => x.IsEnabled))
+                {
+                    entry.Update();
+                }
+            }
+        }
+
+
         public bool IsValid()
         {
             return Part;
