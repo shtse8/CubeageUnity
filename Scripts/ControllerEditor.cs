@@ -88,10 +88,10 @@ namespace Cubeage
                 }
                 if (Layout.ToolbarButton("Debug"))
                 {
-                    foreach(var x  in controller.BoneControllers[0].Bones[0].Properties)
-                    {
-                        Debug.Log(x.Key);
-                    }
+                    // foreach(var x  in controller.BoneControllers[0].Bones[0].Properties)
+                    // {
+                    //     Debug.Log(x.Key, x.Value);
+                    // }
                     // Animator lAnimator = controller.gameObject.GetComponent<Animator>();
                     // Debug.Log(lAnimator);
                     // 

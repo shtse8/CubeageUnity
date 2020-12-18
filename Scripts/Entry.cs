@@ -14,9 +14,9 @@ namespace Cubeage
         [SerializeField]
         protected Property Property;
 
+        // IsEnabled
         [SerializeField]
         public bool _isEnabled = false;
-
         public bool IsEnabled
         {
             get => _isEnabled;
@@ -25,11 +25,11 @@ namespace Cubeage
                 if (Equals(_isEnabled, value))
                     return;
 
-                Value = value && Bone.BoneController.IsEnabled ? GetValue(Bone.BoneController.Value) : DefaultValue;
                 _isEnabled = value;
             }
         }
 
+        // Min
         [SerializeField]
         protected float _min;
         public float Min
@@ -41,11 +41,11 @@ namespace Cubeage
                     return;
 
                 _min = value;
-                Value = value;
+                Update();
             }
         }
 
-
+        // Max
         [SerializeField]
         public float _max;
         public float Max
@@ -57,50 +57,33 @@ namespace Cubeage
                     return;
 
                 _max = value;
-                Value = value;
+                Update();
             }
         }
-        public float Origin;
+        // public float Origin;
 
-        [SerializeField]
-        public float _value;
-
+        // Value
+        protected float _value;
         public float Value
         {
-            get => _value;
-            set
-            {
-                if (Equals(_value, value))
-                    return;
-
-                if (IsEnabled && Bone.BoneController.IsEnabled)
-                {
-                    Debug.Log($"{Property.Type} {Property.Direction}, {value}, {_value}");
-                    var change = GetChange(value);
-                    TransformCounterBones(Property, change);
-
-                    var partValue = GetValue(Bone.Part, change);
-                    Undo.RecordObject(Bone.Part.transform, "");
-                    Bone.Part.transform.Set(Property, partValue);
-
-                    _value = value;
-                }
-            }
+            get => _isEnabled && Bone.BoneController.IsEnabled ? GetValue(Bone.BoneController.Value) : DefaultValue;
         }
 
-        float GetValue(Component component, float change)
+        public float DefaultValue
         {
-            var value = component.transform.Get(Property);
-            switch (Property.Type)
-            {
-                case TransformType.Position:
-                case TransformType.Rotation:
-                    return Value + change;
-                case TransformType.Scale:
-                    return Value * change;
-                default:
-                    throw new Exception("Unknown Type.");
-            }
+            get => Property.Type == TransformType.Scale ? 1 : 0;
+        }
+
+        public void Update()
+        {
+            var change = GetChange(Value);
+            TransformCounterBones(Property, change);
+
+            var partValue = GetValue(Bone.Part, change);
+            Undo.RecordObject(Bone.Part.transform, "");
+            Bone.Part.transform.Set(Property, partValue);
+
+            _value = Value;
         }
 
         public Entry(Bone bone, Property property, float origin)
@@ -110,12 +93,21 @@ namespace Cubeage
             _min = DefaultValue;
             _max = DefaultValue;
             _value = DefaultValue;
-            Origin = origin;
         }
 
-        public float DefaultValue
+        float GetValue(Component component, float change)
         {
-            get => Property.Type == TransformType.Scale ? 1 : 0;
+            var value = component.transform.Get(Property);
+            switch (Property.Type)
+            {
+                case TransformType.Position:
+                case TransformType.Rotation:
+                    return value + change;
+                case TransformType.Scale:
+                    return value * change;
+                default:
+                    throw new Exception("Unknown Type.");
+            }
         }
 
         float GetChange(float value)
@@ -124,9 +116,9 @@ namespace Cubeage
             {
                 case TransformType.Position:
                 case TransformType.Rotation:
-                    return value - Value;
+                    return value - _value;
                 case TransformType.Scale:
-                    return value / Value;
+                    return value / _value;
                 default:
                     throw new Exception("Unknown Type.");
             }

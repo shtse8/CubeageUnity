@@ -12,8 +12,13 @@ namespace Cubeage
         [SerializeReference] public Controller Controller;
         public string Name = "";
         [SerializeReference] public List<Bone> Bones = new List<Bone>();
-        
-        public float DefaultValue = 50;
+
+        [SerializeField]
+        protected float _defaultValue = 50;
+        public float DefaultValue {
+            get => _defaultValue;
+            set => _defaultValue = value;
+        }
 
         [SerializeField]
         private bool _isEnabled = true;
@@ -26,11 +31,13 @@ namespace Cubeage
                 if (Equals(_isEnabled, value))
                     return;
 
-                foreach(var entry in Bones.SelectMany(x => x.Properties.Values).Where(x => x.IsEnabled))
-                {
-                    entry.Value = value ? entry.GetValue(Value) : entry.DefaultValue;
-                }
                 _isEnabled = value;
+
+                // Update Entries
+                foreach (var entry in Bones.SelectMany(x => x.Properties.Values).Where(x => x.IsEnabled))
+                {
+                    entry.Update();
+                }
             }
         }
 
@@ -115,10 +122,9 @@ namespace Cubeage
 
         public void Update()
         {
-            var ratio = Value / 100;
-            foreach ((var property, var boneProperty) in Bones.SelectMany(x => x.Properties).Where(x => x.Value.IsEnabled))
+            foreach (var entry in Bones.SelectMany(x => x.Properties.Values).Where(x => x.IsEnabled))
             {
-                boneProperty.Value = boneProperty.Min + (boneProperty.Max - boneProperty.Min) * ratio;
+                entry.Update();
             }
         }
 
@@ -141,23 +147,6 @@ namespace Cubeage
             }
         }
 
-        public void SetDefault()
-        {
-            DefaultValue = Value;
-        }
-
-        public void SetValue(float value, bool noUpdate = false)
-        {
-            Value = value;
-            if (!noUpdate)
-                Update();
-        }
-
-        public void Reset()
-        {
-            SetValue(DefaultValue);
-        }
-
         public void Add(Transform part)
         {
             if (!Controller.ValidBones.Contains(part))
@@ -175,11 +164,21 @@ namespace Cubeage
         {
         }
 
-
         public void OnAfterDeserialize()
         {
             // Update();
         }
+
+        public void SetDefault()
+        {
+            DefaultValue = Value;
+        }
+
+        public void Reset()
+        {
+            Value = DefaultValue;
+        }
+
     }
 
 }
