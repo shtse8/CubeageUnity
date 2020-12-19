@@ -34,6 +34,29 @@ namespace Cubeage
             }
         }
 
+
+        [SerializeField]
+        private bool _isEnabled = true;
+
+        public bool IsEnabled
+        {
+            get => _isEnabled;
+            set
+            {
+                if (Equals(_isEnabled, value))
+                    return;
+
+                _isEnabled = value;
+
+                // Update Entries
+                foreach (var entry in BoneControllers.SelectMany(x => x.Bones).SelectMany(x => x.Properties.Values).Where(x => x.IsEnabled))
+                {
+                    entry.Update();
+                }
+            }
+        }
+
+
         public SerializableDictionary<Transform, TransformData> ValidBones = new SerializableDictionary<Transform, TransformData>();
 
         [SerializeReference] public List<BoneController> BoneControllers = new List<BoneController>();
@@ -98,13 +121,7 @@ namespace Cubeage
         {
             Undo.RecordObject(this, "Reset All Bones");
 
-            var dict = new Dictionary<BoneController, bool>();
-            foreach(var controller in BoneControllers)
-            {
-                dict.Add(controller, controller.IsEnabled);
-                controller.IsEnabled = false;
-            }
-
+            IsEnabled = false;
             // Reset transform.
             foreach((var transform, var data) in ValidBones)
             {
@@ -112,11 +129,7 @@ namespace Cubeage
                 transform.localScale = data.localScale;
                 transform.localEulerAngles = data.localEulerAngles;
             }
-
-            foreach ((var controller, var isEnabled) in dict)
-            {
-                controller.IsEnabled = isEnabled;
-            }
+            IsEnabled = true;
         }
 
         public void SetToDefault()

@@ -67,7 +67,7 @@ namespace Cubeage
         protected float _value;
         public float Value
         {
-            get => _isEnabled && Bone.IsEnabled && Bone.BoneController.IsEnabled ? GetValue(Bone.BoneController.Value) : DefaultValue;
+            get => _isEnabled && Bone.IsEnabled && Bone.BoneController.IsEnabled && Bone.BoneController.Controller.IsEnabled ? GetValue(Bone.BoneController.Value) : DefaultValue;
         }
 
         public float DefaultValue

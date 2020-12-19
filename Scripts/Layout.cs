@@ -128,6 +128,7 @@ namespace Cubeage
             });
         }
 
+        private static double lastClickTime;
         public static void ObjectLabel<T>(T value) where T : UnityEngine.Object
         {
             if (GUILayout.Button(EditorGUIUtility.ObjectContent(value, typeof(T)), new GUIStyle(EditorStyles.textField)
@@ -135,7 +136,20 @@ namespace Cubeage
                 fixedHeight = EditorGUIUtility.singleLineHeight,
                 imagePosition = value ? ImagePosition.ImageLeft : ImagePosition.TextOnly
             }) && value)
-                EditorGUIUtility.PingObject(value);
+            {
+                if (EditorApplication.timeSinceStartup - lastClickTime < 0.3)
+                {
+                    if (value is Component component)
+                    {
+                        Selection.activeGameObject = component.gameObject;
+                        SceneView.FrameLastActiveSceneView();
+                    }
+                } else
+                {
+                    EditorGUIUtility.PingObject(value);
+                    lastClickTime = EditorApplication.timeSinceStartup;
+                }
+            }
         }
 
         public static LayoutPromise<T> Object<T>(T value) where T : UnityEngine.Object
