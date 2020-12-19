@@ -14,7 +14,6 @@ namespace Cubeage
         bool showAllValidBones = false;
         string message = "";
         Controller controller;
-        // Dictionary<ControllerPart, bool> isExpandedStates = new Dictionary<ControllerPart, bool>();
 
         void OnEnable()
         {
@@ -35,18 +34,15 @@ namespace Cubeage
 
         public override void OnInspectorGUI()
         {
-            /*
             using (Layout.Horizontal())
             {
                 Layout.Label("Target Avatar");
                 Layout.Object(controller.Avatar)
                     .OnChanged(x =>
                     {
-                        AddUndo("Set Avatar");
                         controller.Avatar = x;
                     });
             }
-            */
             /*
             int pickerID = 455454425;
             if (GUILayout.Button("Select"))
@@ -77,7 +73,7 @@ namespace Cubeage
                 {
                     using (Layout.Indent())
                     {
-                        foreach (var bone in controller.ValidBones.Keys)
+                        foreach (var bone in controller.ValidBones)
                         {
                             using (Layout.Horizontal())
                             {
@@ -130,7 +126,7 @@ namespace Cubeage
             }
 
             
-            foreach (var currentController in controller.BoneControllers.ToArray())
+            foreach (var currentController in controller.BoneControllers)
             {
                 using (Layout.Horizontal())
                 {
@@ -141,19 +137,16 @@ namespace Cubeage
                     Layout.Toggle(currentController.IsEnabled)
                             .OnChanged(x =>
                             {
-                                AddUndo("Toggle Controller");
                                 currentController.IsEnabled = x;
                             });
                     Layout.Text(currentController.Name)
                             .OnChanged(x =>
                             {
-                                AddUndo("Change Controller Name");
                                 currentController.Name = x;
                             });
                     Layout.Slider(currentController.Value, 0, 100)
                         .OnChanged(x =>
                         {
-                            AddUndo("Slide Controller");
                             currentController.Value = x;
                         });
                     /*
@@ -176,22 +169,21 @@ namespace Cubeage
                         {
                             if (Layout.ToolbarButton("Reset"))
                             {
-                                AddUndo("Reset Controller");
                                 currentController.SetToDefault();
-                                message = "Reset to Default.";
                             }
                             if (Layout.ToolbarButton("Set Default"))
                             {
-                                AddUndo("Set Controller Default");
                                 currentController.SetDefault();
-                                message = "Set Default Done.";
                             }
                             Layout.FlexibleSpace();
-                            Layout.Label(message);
+
+                            if (Layout.ToolbarButton("Remove") && Confirm("Are you sure want to remove?"))
+                            {
+                                controller.Remove(currentController);
+                            }
                         }
                         Layout.EnumToolbar(currentController.Mode).OnChanged(x =>
                         {
-                            AddUndo("Change Mode");
                             currentController.Mode = x;
                         });
 
@@ -200,17 +192,15 @@ namespace Cubeage
                         {
                             using (Layout.Horizontal())
                             {
-                                Layout.Foldout(bone.isExpanded)
+                                Layout.Foldout(bone.IsExpanded)
                                     .OnChanged(x =>
                                     {
-                                        AddUndo("Expand Bone");
-                                        bone.isExpanded = x;
+                                        bone.IsExpanded = x;
                                     });
 
                                 Layout.Toggle(bone.IsEnabled)
                                         .OnChanged(x =>
                                         {
-                                            AddUndo("Toggle Bone");
                                             bone.IsEnabled = x;
                                         });
                                 Layout.ObjectLabel(bone.Part);
@@ -224,7 +214,7 @@ namespace Cubeage
                                 */
                             }
 
-                            if (bone.isExpanded)
+                            if (bone.IsExpanded)
                             {
                                 using (Layout.Indent())
                                 {
@@ -257,7 +247,6 @@ namespace Cubeage
                                 {
                                     try
                                     {
-                                        AddUndo("Add Bone");
                                         currentController.Add(x);
                                     }
                                     catch (Exception e)
@@ -273,21 +262,6 @@ namespace Cubeage
 
         }
 
-        void AddUndo(string name)
-        {
-            Undo.SetCurrentGroupName(name);
-            Undo.RecordObject(controller, name);
-        }
-
-        void AddUndo(UnityEngine.Object target, string name)
-        {
-            Undo.RecordObject(target, name);
-        }
-        void AddUndo(UnityEngine.Object[] targets, string name)
-        {
-            Undo.RecordObjects(targets, name);
-        }
-
 
         bool Confirm(string message)
         {
@@ -299,9 +273,6 @@ namespace Cubeage
             EditorUtility.DisplayDialog("Controller @ Cubeage", message, "Okay");
         }
 
-        /* 
-         * Draw Transform Controller with toggle.
-         */
         void DrawTransformController(Bone bone, Property property, BoneController boneController)
         {
             var entry = bone.Properties[property];
@@ -310,7 +281,6 @@ namespace Cubeage
                 Layout.Toggle(entry.IsEnabled)
                         .OnChanged(x =>
                         {
-                            AddUndo("Toggle Property");
                             entry.IsEnabled = x;
                         });
             }
@@ -336,14 +306,12 @@ namespace Cubeage
                     case Mode.Min:
                         floatField.OnChanged(x =>
                             {
-                                AddUndo("Change Transform");
                                 entry.Min = x;
                             });
                         break;
                     case Mode.Max:
                         floatField.OnChanged(x =>
                             {
-                                AddUndo("Change Transform");
                                 entry.Max = x;
                             });
                         break;
@@ -352,25 +320,5 @@ namespace Cubeage
         }
 
 
-    }
-
-    public class Disposable : IDisposable
-    {
-        readonly Action Action;
-
-        public Disposable(Action action)
-        {
-            Action = action;
-        }
-
-        public void Dispose()
-        {
-            Action();
-        }
-
-        public static IDisposable Create(Action action)
-        {
-            return new Disposable(action);
-        }
     }
 }

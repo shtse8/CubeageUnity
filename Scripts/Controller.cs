@@ -17,24 +17,30 @@ namespace Cubeage
         public Vector3 localEulerAngles;
     }
 
-    public class Controller : MonoBehaviour, ISerializationCallbackReceiver
+    public class Controller : MonoBehaviour
     {
+        public const string POSTFIX = "_ctrl";
+
+        #region Avatar
         [SerializeReference]
         [SerializeField]
         private GameObject _avatar;
 
-        public const string POSTFIX = "_ctrl";
-
         public GameObject Avatar
         {
             get => _avatar;
-            set {
+            set
+            {
+                if (Equals(_avatar, value))
+                    return;
+
                 _avatar = value;
                 UpdateValidBones();
             }
         }
+        #endregion
 
-
+        #region isEnabled
         [SerializeField]
         private bool _isEnabled = true;
 
@@ -49,23 +55,56 @@ namespace Cubeage
                 _isEnabled = value;
 
                 // Update Entries
-                foreach (var entry in BoneControllers.SelectMany(x => x.Bones).SelectMany(x => x.Properties.Values).Where(x => x.IsEnabled))
+                foreach (var entry in _boneControllers.SelectMany(x => x.Bones).SelectMany(x => x.Properties.Values).Where(x => x.IsEnabled))
                 {
                     entry.Update();
                 }
             }
         }
 
+        #endregion
 
-        public SerializableDictionary<Transform, TransformData> ValidBones = new SerializableDictionary<Transform, TransformData>();
+        #region ValidBones
+        [SerializeField]
+        private SerializableDictionary<Transform, TransformData> _validBones = new SerializableDictionary<Transform, TransformData>();
+        public IList<Transform> ValidBones => _validBones.Keys.ToArray();
+        #endregion
 
-        [SerializeReference] public List<BoneController> BoneControllers = new List<BoneController>();
+        #region BoneControllers
+        [SerializeField]
+        private List<BoneController> _boneControllers = new List<BoneController>();
+        public IList<BoneController> BoneControllers => _boneControllers.ToArray();
+        #endregion
 
+        #region private methods
         void Reset()
         {
             Avatar = gameObject;
+            UpdateValidBones();
         }
 
+        void UpdateValidBones()
+        {
+            _validBones.Clear();
+            foreach (var transform in Avatar.GetComponentsInChildren<Transform>().Where(x => IsBone(x)))
+            {
+                var data = GetData(transform);
+                _validBones.Add(transform, data);
+            }
+        }
+        TransformData GetData(Transform transform)
+        {
+            return new TransformData
+            {
+                localPosition = transform.localPosition,
+                localEulerAngles = transform.localEulerAngles,
+                localScale = transform.localScale
+            };
+        }
+
+        #endregion
+
+        #region public methods
         public bool HasAnimator()
         {
             return gameObject.GetComponent<Animator>();
@@ -96,20 +135,16 @@ namespace Cubeage
             return false;
         }
 
-        void UpdateValidBones()
+        public void Remove(BoneController controller)
         {
-            ValidBones.Clear();
-            foreach (var transform in Avatar.GetComponentsInChildren<Transform>().Where(x => IsBone(x)))
-            {
-                var data = GetData(transform);
-                ValidBones.Add(transform, data);
-            }
+            Undo.RecordObject(this, "Remove Controller");
+            _boneControllers.Remove(controller);
         }
 
         public void AddController()
         {
             Undo.RecordObject(this, "Add Controller");
-            BoneControllers.Add(new BoneController(this, $"Controller {BoneControllers.Count + 1}"));
+            _boneControllers.Add(new BoneController(this, $"Controller {_boneControllers.Count + 1}"));
         }
 
         public static bool IsBone(Component component)
@@ -123,7 +158,7 @@ namespace Cubeage
 
             IsEnabled = false;
             // Reset transform.
-            foreach((var transform, var data) in ValidBones)
+            foreach ((var transform, var data) in _validBones)
             {
                 transform.localPosition = data.localPosition;
                 transform.localScale = data.localScale;
@@ -135,28 +170,16 @@ namespace Cubeage
         public void SetToDefault()
         {
             Undo.RecordObject(this, "Set All Controller To Default");
-            foreach (var controller in BoneControllers)
+            foreach (var controller in _boneControllers)
             {
                 controller.SetToDefault();
             }
         }
-
-        TransformData GetData(Transform transform)
+        public bool IsValidBone(Transform bone)
         {
-            return new TransformData
-            {
-                localPosition = transform.localPosition,
-                localEulerAngles = transform.localEulerAngles,
-                localScale = transform.localScale
-            };
+            return _validBones.Contains(bone);
         }
+        #endregion
 
-        public void OnBeforeSerialize()
-        {
-        }
-
-        public void OnAfterDeserialize()
-        {
-        }
     }
 }

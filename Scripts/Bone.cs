@@ -2,6 +2,7 @@
 using System;
 using System.Linq;
 using System.Collections.Generic;
+using UnityEditor;
 
 namespace Cubeage
 {
@@ -11,7 +12,21 @@ namespace Cubeage
         [SerializeReference] public BoneController BoneController;
         [SerializeReference] public Transform Part;
         public SerializableDictionary<Property, Entry> Properties = new SerializableDictionary<Property, Entry>();
-        public bool isExpanded = false;
+
+        [SerializeField]
+        public bool _isExpanded = false;
+        public bool IsExpanded
+        {
+            get => _isExpanded;
+            set
+            {
+                if (Equals(_isExpanded, value))
+                    return;
+
+                Undo.RecordObject(BoneController.Controller, "Expand Bone");
+                _isExpanded = value;
+            }
+        }
 
         public Bone(BoneController boneController, Transform part)
         {
@@ -38,6 +53,8 @@ namespace Cubeage
             {
                 if (Equals(_isEnabled, value))
                     return;
+
+                Undo.RecordObject(BoneController.Controller, "Toggle Bone");
 
                 _isEnabled = value;
 

@@ -25,6 +25,7 @@ namespace Cubeage
                 if (Equals(_isEnabled, value))
                     return;
 
+                Undo.RecordObject(Bone.BoneController.Controller, "Toggle Property");
                 _isEnabled = value;
                 Update();
             }
@@ -41,6 +42,7 @@ namespace Cubeage
                 if (Equals(_min, value))
                     return;
 
+                Undo.RecordObject(Bone.BoneController.Controller, "Change Min");
                 _min = value;
                 Update();
             }
@@ -57,6 +59,7 @@ namespace Cubeage
                 if (Equals(_max, value))
                     return;
 
+                Undo.RecordObject(Bone.BoneController.Controller, "Change Max");
                 _max = value;
                 Update();
             }
