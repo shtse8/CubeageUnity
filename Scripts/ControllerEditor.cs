@@ -9,7 +9,6 @@ using System.Reflection;
 namespace Cubeage
 {
     [CustomEditor(typeof(Controller))]
-    [CanEditMultipleObjects]
     public class ControllerEditor : Editor
     {
         bool showAllValidBones = false;
@@ -102,20 +101,21 @@ namespace Cubeage
 
             using (Layout.Toolbar())
             {
-                if (Layout.ToolbarButton("Add"))
+                if (Layout.ToolbarButton("Add Controller"))
                 {
                     controller.AddController();
                 }
-                if (Layout.ToolbarButton("Reset"))
-                {
-                    controller.ResetBones();
-                }
-                if (Layout.ToolbarButton("Default"))
+                if (Layout.ToolbarButton("Set All To Default"))
                 {
                     controller.SetToDefault();
                 }
-                if (Layout.ToolbarButton("Debug"))
+                Layout.FlexibleSpace();
+                if (Layout.ToolbarButton("Fix"))
                 {
+                    controller.ResetBones();
+                }
+                // if (Layout.ToolbarButton("測試"))
+                // {
                     // foreach(var x  in controller.BoneControllers[0].Bones[0].Properties)
                     // {
                     //     Debug.Log(x.Key, x.Value);
@@ -126,8 +126,7 @@ namespace Cubeage
                     // Transform lBoneTransform = lAnimator.GetBoneTransform(HumanBodyBones.LeftFoot);
                     // 
                     // Debug.Log(lBoneTransform);
-                }
-                Layout.FlexibleSpace();
+                // }
             }
 
             

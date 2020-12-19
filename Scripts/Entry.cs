@@ -64,6 +64,7 @@ namespace Cubeage
         // public float Origin;
 
         // Value
+        [SerializeField]
         protected float _value;
         public float Value
         {
