@@ -34,7 +34,6 @@ namespace Cubeage
             }) && Confirm("Are you sure want to remove?");
         }
 
-
         public override void OnInspectorGUI()
         {
             /*
@@ -49,7 +48,23 @@ namespace Cubeage
                     });
             }
             */
+            /*
+            int pickerID = 455454425;
+            if (GUILayout.Button("Select"))
+            {
+                EditorGUIUtility.ShowObjectPicker<Transform>(null, true, "_bc", pickerID);
 
+            }
+
+            if (Event.current.commandName == "ObjectSelectorUpdated")
+            {
+                if (EditorGUIUtility.GetObjectPickerControlID() == pickerID)
+                {
+                    var transform  = EditorGUIUtility.GetObjectPickerObject();
+                    Debug.Log(transform);
+                }
+            }
+            */
             using (Layout.Horizontal())
             using (Layout.Box())
             {
@@ -67,15 +82,15 @@ namespace Cubeage
                         {
                             using (Layout.Horizontal())
                             {
-                                Layout.Label(bone.name);
+                                Layout.ObjectLabel(bone);
                                 if (controller.TryGetTargetTransform(bone, out var target))
                                 {
-                                    Layout.Label(target.name);
+                                    Layout.ObjectLabel(target);
                                 } else
                                 {
                                     using (Layout.Color(Color.red))
                                     {
-                                        Layout.Label("Missing!");
+                                        Layout.ObjectLabel<GameObject>(null);
                                     }
                                 }
                             }
@@ -89,17 +104,14 @@ namespace Cubeage
             {
                 if (Layout.ToolbarButton("Add"))
                 {
-                    AddUndo("Add Controller");
                     controller.AddController();
                 }
                 if (Layout.ToolbarButton("Reset"))
                 {
-                    AddUndo("Reset All Bones");
                     controller.ResetBones();
                 }
                 if (Layout.ToolbarButton("Default"))
                 {
-                    AddUndo("Set All Controller To Default");
                     controller.SetToDefault();
                 }
                 if (Layout.ToolbarButton("Debug"))
@@ -125,7 +137,6 @@ namespace Cubeage
                 {
                     Layout.Foldout(currentController.IsExpanded)
                           .OnChanged(x => {
-                              AddUndo("Expand Controller");
                               currentController.IsExpanded = x;
                           });
                     Layout.Toggle(currentController.IsEnabled)
@@ -134,7 +145,12 @@ namespace Cubeage
                                 AddUndo("Toggle Controller");
                                 currentController.IsEnabled = x;
                             });
-                    Layout.Text(currentController.Name);
+                    Layout.Text(currentController.Name)
+                            .OnChanged(x =>
+                            {
+                                AddUndo("Change Controller Name");
+                                currentController.Name = x;
+                            });
                     Layout.Slider(currentController.Value, 0, 100)
                         .OnChanged(x =>
                         {
@@ -198,10 +214,7 @@ namespace Cubeage
                                             AddUndo("Toggle Bone");
                                             bone.IsEnabled = x;
                                         });
-                                using (Layout.SetEnable(false))
-                                {
-                                    Layout.Object(bone.Part);
-                                }
+                                Layout.ObjectLabel(bone.Part);
                                 /*
                                 if (DrawRemoveButton())
                                 {

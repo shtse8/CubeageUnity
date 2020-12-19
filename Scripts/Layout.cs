@@ -128,10 +128,18 @@ namespace Cubeage
             });
         }
 
+        public static void ObjectLabel<T>(T value) where T : UnityEngine.Object
+        {
+            if (GUILayout.Button(EditorGUIUtility.ObjectContent(value, typeof(T)), new GUIStyle(EditorStyles.textField)
+            {
+                fixedHeight = EditorGUIUtility.singleLineHeight,
+                imagePosition = value ? ImagePosition.ImageLeft : ImagePosition.TextOnly
+            }) && value)
+                EditorGUIUtility.PingObject(value);
+        }
 
         public static LayoutPromise<T> Object<T>(T value) where T : UnityEngine.Object
         {
-            
             return new LayoutPromise<T>(value, x => (T)EditorGUILayout.ObjectField(value, typeof(T), true));
         }
 

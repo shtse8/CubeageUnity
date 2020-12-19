@@ -23,6 +23,8 @@ namespace Cubeage
         [SerializeField]
         private GameObject _avatar;
 
+        public const string POSTFIX = "_ctrl";
+
         public GameObject Avatar
         {
             get => _avatar;
@@ -62,7 +64,7 @@ namespace Cubeage
             for(var i = 0; i < transform.childCount; i++)
             {
                 var child = transform.GetChild(i);
-                if (Equals(child.name + "_bc", transform.name))
+                if (Equals(child.name + POSTFIX, transform.name))
                 {
                     target = child;
                     return true;
@@ -83,16 +85,19 @@ namespace Cubeage
 
         public void AddController()
         {
+            Undo.RecordObject(this, "Add Controller");
             BoneControllers.Add(new BoneController(this, $"Controller {BoneControllers.Count + 1}"));
         }
 
         public static bool IsBone(Component component)
         {
-            return component.name.EndsWith("_bc");
+            return component.name.EndsWith(POSTFIX);
         }
 
         public void ResetBones()
         {
+            Undo.RecordObject(this, "Reset All Bones");
+
             var dict = new Dictionary<BoneController, bool>();
             foreach(var controller in BoneControllers)
             {
@@ -116,7 +121,8 @@ namespace Cubeage
 
         public void SetToDefault()
         {
-            foreach(var controller in BoneControllers)
+            Undo.RecordObject(this, "Set All Controller To Default");
+            foreach (var controller in BoneControllers)
             {
                 controller.SetToDefault();
             }

@@ -26,6 +26,7 @@ namespace Cubeage
                     return;
 
                 _isEnabled = value;
+                Update();
             }
         }
 

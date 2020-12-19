@@ -2,12 +2,12 @@
 using UnityEngine;
 using System;
 using System.Linq;
-
+using UnityEditor;
 
 namespace Cubeage
 {
     [Serializable]
-    public class BoneController : ISerializationCallbackReceiver
+    public class BoneController
     {
         [SerializeReference] public Controller Controller;
         public string Name = "";
@@ -57,6 +57,8 @@ namespace Cubeage
             {
                 if (Equals(_isExpanded, value))
                     return;
+
+                Undo.RecordObject(Controller, "Expand Controller");
                 _isExpanded = value;
                 if (!value)
                     Mode = Mode.View;
@@ -113,7 +115,6 @@ namespace Cubeage
             }
         }
 
-
         public IEnumerable<Bone> GetValidBones()
         {
             RemoveInvalidBones();
@@ -127,7 +128,6 @@ namespace Cubeage
                 entry.Update();
             }
         }
-
 
         public void Add(Bone bone)
         {
@@ -158,15 +158,6 @@ namespace Cubeage
         public void Remove(Bone bone)
         {
             Bones.Remove(bone);
-        }
-
-        public void OnBeforeSerialize()
-        {
-        }
-
-        public void OnAfterDeserialize()
-        {
-            // Update();
         }
 
         public void SetDefault()
