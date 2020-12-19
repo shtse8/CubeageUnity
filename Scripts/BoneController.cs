@@ -9,7 +9,10 @@ namespace Cubeage
     [Serializable]
     public class BoneController
     {
-        [SerializeReference] public Controller Controller;
+        [SerializeField]
+        [SerializeReference]
+        protected Controller _controller;
+        public Controller Controller => _controller;
 
         [SerializeField]
         private  string _name = "";
@@ -20,7 +23,7 @@ namespace Cubeage
             {
                 if (Equals(_name, value))
                     return;
-                Undo.RecordObject(Controller, "Change Controller Name");
+                Undo.RecordObject(_controller.RecordTarget, "Change Controller Name");
                 _name = value;
             }
         }
@@ -34,7 +37,7 @@ namespace Cubeage
             {
                 if (Equals(_defaultValue, value))
                     return;
-                Undo.RecordObject(Controller, "Set Controller Default");
+                Undo.RecordObject(_controller.RecordTarget, "Set Controller Default");
                 _defaultValue = value;
             }
         }
@@ -50,7 +53,7 @@ namespace Cubeage
                 if (Equals(_isEnabled, value))
                     return;
 
-                Undo.RecordObject(Controller, "Toggle Controller");
+                Undo.RecordObject(_controller.RecordTarget, "Toggle Controller");
                 _isEnabled = value;
 
                 // Update Entries
@@ -78,7 +81,7 @@ namespace Cubeage
                 if (Equals(_isExpanded, value))
                     return;
 
-                Undo.RecordObject(Controller, "Expand Controller");
+                Undo.RecordObject(_controller.RecordTarget, "Expand Controller");
                 _isExpanded = value;
                 if (!value)
                     Mode = Mode.View;
@@ -91,11 +94,13 @@ namespace Cubeage
             {
                 if (Equals(_value, value))
                     return;
-                Undo.RecordObject(Controller, "Slide Controller");
+                Undo.RecordObject(_controller.RecordTarget, "Slide Controller");
+                
                 _value = value;
-                if (value == 100)
+
+                if (_value == 100)
                     Mode = Mode.Max;
-                else if (value == 0)
+                else if (_value == 0)
                     Mode = Mode.Min;
                 else
                     Mode = Mode.View;
@@ -110,7 +115,7 @@ namespace Cubeage
                 if (Equals(_mode, value))
                     return;
 
-                Undo.RecordObject(Controller, "Change Mode");
+                Undo.RecordObject(_controller.RecordTarget, "Change Mode");
                 switch (value)
                 {
                     case Mode.Max:
@@ -126,7 +131,7 @@ namespace Cubeage
 
         public BoneController(Controller controller, string name)
         {
-            Controller = controller;
+            _controller = controller;
             Name = name;
         }
 
@@ -155,12 +160,12 @@ namespace Cubeage
         public void Add(Bone bone)
         {
             // Check Controller Part within the avatar
-            if (!Controller.Avatar.GetComponentsInChildren<Transform>().Contains(bone.Part))
+            if (!_controller.Avatar.GetComponentsInChildren<Transform>().Contains(bone.Transform))
             {
                 throw new Exception("This part doesn't belong to this avatar.");
             }
             // check duplicated part in the controller
-            else if (Bones.Select(x => x.Part).Contains(bone.Part))
+            else if (Bones.Select(x => x.Transform).Contains(bone.Transform))
             {
                 throw new Exception("Duplicated part.");
             }
@@ -172,10 +177,10 @@ namespace Cubeage
 
         public void Add(Transform part)
         {
-            if (!Controller.IsValidBone(part))
+            if (!_controller.IsValidBone(part))
                 throw new Exception("Component is not valid.");
 
-            Undo.RecordObject(Controller, "Add Bone");
+            Undo.RecordObject(_controller.RecordTarget, "Add Bone");
             Add(new Bone(this, part));
         }
 
@@ -191,7 +196,7 @@ namespace Cubeage
 
         public void SetToDefault()
         {
-            Undo.RecordObject(Controller, "Reset Controller");
+            Undo.RecordObject(_controller.RecordTarget, "Reset Controller");
             Value = DefaultValue;
         }
 

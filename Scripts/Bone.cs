@@ -9,9 +9,19 @@ namespace Cubeage
     [Serializable]
     public class Bone
     {
-        [SerializeReference] public BoneController BoneController;
-        [SerializeReference] public Transform Part;
-        public SerializableDictionary<Property, Entry> Properties = new SerializableDictionary<Property, Entry>();
+        [SerializeReference] 
+        [SerializeField]
+        protected BoneController _boneController;
+        public BoneController BoneController => _boneController;
+
+        [SerializeReference] 
+        [SerializeField]
+        protected Transform _transform;
+        public Transform Transform => _transform;
+
+        [SerializeField]
+        protected SerializableDictionary<Property, Entry> _properties = new SerializableDictionary<Property, Entry>();
+        public Dictionary<Property, Entry> Properties => _properties.ToDictionary(x => x.Key, x => x.Value);
 
         [SerializeField]
         public bool _isExpanded = false;
@@ -23,29 +33,27 @@ namespace Cubeage
                 if (Equals(_isExpanded, value))
                     return;
 
-                Undo.RecordObject(BoneController.Controller, "Expand Bone");
+                Undo.RecordObject(_boneController.Controller.RecordTarget, "Expand Bone");
                 _isExpanded = value;
             }
         }
 
         public Bone(BoneController boneController, Transform part)
         {
-            BoneController = boneController;
-            Part = part;
+            _boneController = boneController;
+            _transform = part;
             foreach (var type in EnumHelper.GetValues<TransformType>())
             {
-                foreach (var direction in EnumHelper.GetValues<Direction>())
+                foreach (var direction in EnumHelper.GetValues<Dimension>())
                 {
                     var property = new Property(type, direction);
-                    var origin = Part.transform.Get(property);
-                    Properties.Add(property, new Entry(this, property, origin));
+                    _properties.Add(property, new Entry(this, property));
                 }
             }
         }
 
         [SerializeField]
         private bool _isEnabled = true;
-
         public bool IsEnabled
         {
             get => _isEnabled;
@@ -54,12 +62,12 @@ namespace Cubeage
                 if (Equals(_isEnabled, value))
                     return;
 
-                Undo.RecordObject(BoneController.Controller, "Toggle Bone");
+                Undo.RecordObject(_boneController.Controller.RecordTarget, "Toggle Bone");
 
                 _isEnabled = value;
 
                 // Update Entries
-                foreach (var entry in Properties.Values.Where(x => x.IsEnabled))
+                foreach (var entry in _properties.Values.Where(x => x.IsEnabled))
                 {
                     entry.Update();
                 }
@@ -69,7 +77,7 @@ namespace Cubeage
 
         public bool IsValid()
         {
-            return Part;
+            return _transform;
         }
 
         public bool IsAvailable(Property property)

@@ -1,6 +1,6 @@
 ﻿namespace Cubeage
 {
-    public enum Direction
+    public enum Dimension
     {
         X,
         Y,

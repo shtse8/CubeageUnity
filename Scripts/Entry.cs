@@ -9,10 +9,11 @@ namespace Cubeage
     public class Entry
     {
         [SerializeReference]
-        protected Bone Bone;
+        [SerializeField]
+        protected Bone _bone;
 
         [SerializeField]
-        protected Property Property;
+        protected Property _property;
 
         // IsEnabled
         [SerializeField]
@@ -25,11 +26,12 @@ namespace Cubeage
                 if (Equals(_isEnabled, value))
                     return;
 
-                Undo.RecordObject(Bone.BoneController.Controller, "Toggle Property");
+                Undo.RecordObject(_bone.BoneController.Controller.RecordTarget, "Toggle Property");
                 _isEnabled = value;
                 Update();
             }
         }
+
 
         // Min
         [SerializeField]
@@ -42,7 +44,7 @@ namespace Cubeage
                 if (Equals(_min, value))
                     return;
 
-                Undo.RecordObject(Bone.BoneController.Controller, "Change Min");
+                Undo.RecordObject(_bone.BoneController.Controller.RecordTarget, "Change Min");
                 _min = value;
                 Update();
             }
@@ -59,7 +61,7 @@ namespace Cubeage
                 if (Equals(_max, value))
                     return;
 
-                Undo.RecordObject(Bone.BoneController.Controller, "Change Max");
+                Undo.RecordObject(_bone.BoneController.Controller.RecordTarget, "Change Max");
                 _max = value;
                 Update();
             }
@@ -69,32 +71,31 @@ namespace Cubeage
         // Value
         [SerializeField]
         protected float _value;
-        public float Value
-        {
-            get => _isEnabled && Bone.IsEnabled && Bone.BoneController.IsEnabled && Bone.BoneController.Controller.IsEnabled ? GetValue(Bone.BoneController.Value) : DefaultValue;
-        }
+        public float Value => IsOverallEnabled ? GetValue(_bone.BoneController.Value) : DefaultValue;
 
-        public float DefaultValue
-        {
-            get => Property.Type == TransformType.Scale ? 1 : 0;
-        }
+        public bool IsOverallEnabled => _isEnabled
+            && _bone.IsEnabled
+            && _bone.BoneController.IsEnabled
+            && _bone.BoneController.Controller.IsEnabled;
+
+        public float DefaultValue => _property.Type == TransformType.Scale ? 1 : 0;
 
         public void Update()
         {
-            var change = GetChange(Value);
-            TransformCounterBones(Property, change);
+            var change = GetChange(Value, _value);
+            TransformCounterBones(_property, change);
 
-            var partValue = GetValue(Bone.Part, change);
-            Undo.RecordObject(Bone.Part.transform, "");
-            Bone.Part.transform.Set(Property, partValue);
+            var partValue = GetValue(_bone.Transform, change);
+            Undo.RecordObject(_bone.Transform.transform, "");
+            _bone.Transform.transform.Set(_property, partValue);
 
             _value = Value;
         }
 
-        public Entry(Bone bone, Property property, float origin)
+        public Entry(Bone bone, Property property)
         {
-            Bone = bone;
-            Property = property;
+            _bone = bone;
+            _property = property;
             _min = DefaultValue;
             _max = DefaultValue;
             _value = DefaultValue;
@@ -102,8 +103,8 @@ namespace Cubeage
 
         float GetValue(Component component, float change)
         {
-            var value = component.transform.Get(Property);
-            switch (Property.Type)
+            var value = component.transform.Get(_property);
+            switch (_property.Type)
             {
                 case TransformType.Position:
                 case TransformType.Rotation:
@@ -115,15 +116,17 @@ namespace Cubeage
             }
         }
 
-        float GetChange(float value)
+        public float Change => GetChange(Value, DefaultValue);
+
+        float GetChange(float value, float current)
         {
-            switch (Property.Type)
+            switch (_property.Type)
             {
                 case TransformType.Position:
                 case TransformType.Rotation:
-                    return value - _value;
+                    return value - current;
                 case TransformType.Scale:
-                    return value / _value;
+                    return value / current;
                 default:
                     throw new Exception("Unknown Type.");
             }
@@ -136,7 +139,7 @@ namespace Cubeage
             for (var i = 0; i < transform.childCount; i++)
             {
                 var child = transform.GetChild(i);
-                if (Bone.BoneController.Controller.ValidBones.Contains(child))
+                if (_bone.BoneController.Controller.ValidBones.Contains(child))
                     bones.Add(child);
                 else
                     bones.AddRange(SearchBonesRecursive(child));
@@ -147,7 +150,7 @@ namespace Cubeage
         void TransformCounterBones(Property property, float change)
         {
             change = GetCounterChange(property, change);
-            foreach (var part in SearchBonesRecursive(Bone.Part))
+            foreach (var part in SearchBonesRecursive(_bone.Transform))
             {
                 var newValue = GetValue(part, property, change);
                 Undo.RecordObject(part.transform, "");

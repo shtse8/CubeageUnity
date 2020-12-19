@@ -17,8 +17,10 @@ namespace Cubeage
         public Vector3 localEulerAngles;
     }
 
+    [AddComponentMenu("Cubeage/Avatar Controller")]
     public class Controller : MonoBehaviour
     {
+        
         public const string POSTFIX = "_ctrl";
 
         #region Avatar
@@ -39,6 +41,9 @@ namespace Cubeage
             }
         }
         #endregion
+
+        public Component RecordTarget => this;
+
 
         #region isEnabled
         [SerializeField]
@@ -72,17 +77,17 @@ namespace Cubeage
 
         #region BoneControllers
         [SerializeField]
+        [SerializeReference]
         private List<BoneController> _boneControllers = new List<BoneController>();
         public IList<BoneController> BoneControllers => _boneControllers.ToArray();
         #endregion
 
-        #region private methods
         void Reset()
         {
             Avatar = gameObject;
-            UpdateValidBones();
         }
 
+        #region private methods
         void UpdateValidBones()
         {
             _validBones.Clear();
@@ -107,7 +112,7 @@ namespace Cubeage
         #region public methods
         public bool HasAnimator()
         {
-            return gameObject.GetComponent<Animator>();
+            return _avatar.GetComponent<Animator>();
             // foreach(var x  in controller.BoneControllers[0].Bones[0].Properties)
             // {
             //     Debug.Log(x.Key, x.Value);
@@ -123,7 +128,7 @@ namespace Cubeage
         public bool TryGetTargetTransform(Transform transform, out Transform target)
         {
             target = null;
-            for(var i = 0; i < transform.childCount; i++)
+            for (var i = 0; i < transform.childCount; i++)
             {
                 var child = transform.GetChild(i);
                 if (Equals(child.name + POSTFIX, transform.name))
@@ -137,13 +142,13 @@ namespace Cubeage
 
         public void Remove(BoneController controller)
         {
-            Undo.RecordObject(this, "Remove Controller");
+            Undo.RecordObject(RecordTarget, "Remove Controller");
             _boneControllers.Remove(controller);
         }
 
         public void AddController()
         {
-            Undo.RecordObject(this, "Add Controller");
+            Undo.RecordObject(RecordTarget, "Add Controller");
             _boneControllers.Add(new BoneController(this, $"Controller {_boneControllers.Count + 1}"));
         }
 
@@ -154,7 +159,7 @@ namespace Cubeage
 
         public void ResetBones()
         {
-            Undo.RecordObject(this, "Reset All Bones");
+            Undo.RecordObject(RecordTarget, "Reset All Bones");
 
             IsEnabled = false;
             // Reset transform.
@@ -169,7 +174,7 @@ namespace Cubeage
 
         public void SetToDefault()
         {
-            Undo.RecordObject(this, "Set All Controller To Default");
+            Undo.RecordObject(RecordTarget, "Set All Controller To Default");
             foreach (var controller in _boneControllers)
             {
                 controller.SetToDefault();
@@ -180,6 +185,6 @@ namespace Cubeage
             return _validBones.Contains(bone);
         }
         #endregion
-
     }
+
 }
