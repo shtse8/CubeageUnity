@@ -143,6 +143,7 @@ namespace Cubeage
         public void Remove(BoneController controller)
         {
             Undo.RecordObject(RecordTarget, "Remove Controller");
+            controller.IsEnabled = false;
             _boneControllers.Remove(controller);
         }
 

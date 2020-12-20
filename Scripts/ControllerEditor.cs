@@ -29,7 +29,12 @@ namespace Cubeage
                 {
                     textColor = Color.red
                 }
-            }) && Confirm("Are you sure want to remove?");
+            }) && ConfirmRemove();
+        }
+
+        bool ConfirmRemove()
+        {
+            return Confirm("Are you sure want to remove?");
         }
 
         public override void OnInspectorGUI()
@@ -177,9 +182,10 @@ namespace Cubeage
                             }
                             Layout.FlexibleSpace();
 
-                            if (Layout.ToolbarButton("Remove") && Confirm("Are you sure want to remove?"))
+                            if (Layout.ToolbarButton("Remove") && ConfirmRemove())
                             {
                                 _controller.Remove(currentController);
+                                GUIUtility.ExitGUI();
                             }
                         }
                         Layout.EnumToolbar(currentController.Mode).OnChanged(x =>
@@ -188,7 +194,7 @@ namespace Cubeage
                         });
 
                         Layout.Label($"Bones ({currentController.Bones.Count})");
-                        foreach (var bone in currentController.GetValidBones())
+                        foreach (var bone in currentController.Bones)
                         {
                             using (Layout.Horizontal())
                             {
@@ -204,7 +210,11 @@ namespace Cubeage
                                             bone.IsEnabled = x;
                                         });
                                 Layout.ObjectLabel(bone.Transform);
-
+                                if (Layout.MiniButton("Remove") && ConfirmRemove())
+                                {
+                                    currentController.Remove(bone);
+                                    GUIUtility.ExitGUI();
+                                }
                                 /*
                                 if (DrawRemoveButton())
                                 {

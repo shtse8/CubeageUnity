@@ -27,7 +27,10 @@ namespace Cubeage
                 _name = value;
             }
         }
-        [SerializeReference] public List<Bone> Bones = new List<Bone>();
+        [SerializeReference] 
+        [SerializeField]
+        protected List<Bone> _bones = new List<Bone>();
+        public List<Bone> Bones => _bones.ToList();
 
         [SerializeField]
         protected float _defaultValue = 50;
@@ -57,7 +60,7 @@ namespace Cubeage
                 _isEnabled = value;
 
                 // Update Entries
-                foreach (var entry in Bones.SelectMany(x => x.Properties.Values).Where(x => x.IsEnabled))
+                foreach (var entry in _bones.SelectMany(x => x.Properties.Values).Where(x => x.IsEnabled))
                 {
                     entry.Update();
                 }
@@ -135,23 +138,9 @@ namespace Cubeage
             Name = name;
         }
 
-        void RemoveInvalidBones()
-        {
-            foreach (var x in Bones.Where(x => !x.IsValid()).ToArray())
-            {
-                Remove(x);
-            }
-        }
-
-        public IEnumerable<Bone> GetValidBones()
-        {
-            RemoveInvalidBones();
-            return Bones.ToArray();
-        }
-
         public void Update()
         {
-            foreach (var entry in Bones.SelectMany(x => x.Properties.Values).Where(x => x.IsEnabled))
+            foreach (var entry in _bones.SelectMany(x => x.Properties.Values).Where(x => x.IsEnabled))
             {
                 entry.Update();
             }
@@ -165,13 +154,13 @@ namespace Cubeage
                 throw new Exception("This part doesn't belong to this avatar.");
             }
             // check duplicated part in the controller
-            else if (Bones.Select(x => x.Transform).Contains(bone.Transform))
+            else if (_bones.Select(x => x.Transform).Contains(bone.Transform))
             {
                 throw new Exception("Duplicated part.");
             }
             else
             {
-                Bones.Add(bone);
+                _bones.Add(bone);
             }
         }
 
@@ -186,7 +175,9 @@ namespace Cubeage
 
         public void Remove(Bone bone)
         {
-            Bones.Remove(bone);
+            Undo.RecordObject(Controller.RecordTarget, "Remove Bone");
+            bone.IsEnabled = false;
+            _bones.Remove(bone);
         }
 
         public void SetDefault()

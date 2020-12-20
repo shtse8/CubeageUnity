@@ -95,6 +95,11 @@ namespace Cubeage
             return GUILayout.Button(label);
         }
 
+        public static bool MiniButton(string label)
+        {
+            return GUILayout.Button(label, EditorStyles.miniButton);
+        }
+
         public static void FlexibleSpace()
         {
             GUILayout.FlexibleSpace();
