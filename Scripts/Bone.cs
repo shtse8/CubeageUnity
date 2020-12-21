@@ -11,8 +11,8 @@ namespace Cubeage
     {
         [SerializeReference] 
         [SerializeField]
-        protected BoneController _boneController;
-        public BoneController BoneController => _boneController;
+        protected Controller _controller;
+        public Controller Controller => _controller;
 
         [SerializeReference] 
         [SerializeField]
@@ -22,6 +22,28 @@ namespace Cubeage
         [SerializeField]
         protected SerializableDictionary<Property, Entry> _properties = new SerializableDictionary<Property, Entry>();
         public Dictionary<Property, Entry> Properties => _properties.ToDictionary(x => x.Key, x => x.Value);
+
+        // IsEnabled
+        [SerializeField]
+        protected bool _transformChildren = false;
+        public bool TransformChildren
+        {
+            get => _transformChildren;
+            set
+            {
+                if (Equals(_transformChildren, value))
+                    return;
+
+                Undo.RecordObject(_controller.AvatarController.RecordTarget, "Toggle Transform Children");
+                _transformChildren = value;
+
+                // Update Entries
+                foreach (var entry in _properties.Values.Where(x => x.IsEnabled))
+                {
+                    entry.Update();
+                }
+            }
+        }
 
         [SerializeField]
         public bool _isExpanded = false;
@@ -33,14 +55,14 @@ namespace Cubeage
                 if (Equals(_isExpanded, value))
                     return;
 
-                Undo.RecordObject(_boneController.Controller.RecordTarget, "Expand Bone");
+                Undo.RecordObject(_controller.AvatarController.RecordTarget, "Expand Bone");
                 _isExpanded = value;
             }
         }
 
-        public Bone(BoneController boneController, Transform part)
+        public Bone(Controller boneController, Transform part)
         {
-            _boneController = boneController;
+            _controller = boneController;
             _transform = part;
             foreach (var type in EnumHelper.GetValues<TransformType>())
             {
@@ -62,7 +84,7 @@ namespace Cubeage
                 if (Equals(_isEnabled, value))
                     return;
 
-                Undo.RecordObject(_boneController.Controller.RecordTarget, "Toggle Bone");
+                Undo.RecordObject(_controller.AvatarController.RecordTarget, "Toggle Bone");
 
                 _isEnabled = value;
 

@@ -8,16 +8,16 @@ using System.Reflection;
 
 namespace Cubeage
 {
-    [CustomEditor(typeof(Controller))]
+    [CustomEditor(typeof(AvatarController))]
     public class ControllerEditor : Editor
     {
         bool _showAllValidBones = false;
         string message = "";
-        Controller _controller;
+        AvatarController _avatarController;
 
         void OnEnable()
         {
-            _controller = (Controller)target;
+            _avatarController = (AvatarController)target;
         }
 
         bool DrawRemoveButton()
@@ -71,19 +71,19 @@ namespace Cubeage
                 using (Layout.Horizontal())
                 {
                     Layout.Foldout(_showAllValidBones).OnChanged(x => _showAllValidBones = x);
-                    Layout.Label($"Bones: {_controller.ValidBones.Count}");
+                    Layout.Label($"Bones: {_avatarController.ValidBones.Count}");
                 }
                     
                 if (_showAllValidBones)
                 {
                     using (Layout.Indent())
                     {
-                        foreach (var bone in _controller.ValidBones)
+                        foreach (var bone in _avatarController.ValidBones.Keys)
                         {
                             using (Layout.Horizontal())
                             {
                                 Layout.ObjectLabel(bone);
-                                if (_controller.TryGetTargetTransform(bone, out var target))
+                                if (_avatarController.TryGetTargetTransform(bone, out var target))
                                 {
                                     Layout.ObjectLabel(target);
                                 } else
@@ -104,16 +104,16 @@ namespace Cubeage
             {
                 if (Layout.ToolbarButton("Add Controller"))
                 {
-                    _controller.AddController();
+                    _avatarController.AddController();
                 }
                 if (Layout.ToolbarButton("Set All To Default"))
                 {
-                    _controller.SetToDefault();
+                    _avatarController.SetToDefault();
                 }
                 Layout.FlexibleSpace();
                 if (Layout.ToolbarButton("Fix"))
                 {
-                    _controller.ResetBones();
+                    _avatarController.ResetBones();
                 }
                 // if (Layout.ToolbarButton("測試"))
                 // {
@@ -131,28 +131,28 @@ namespace Cubeage
             }
 
             
-            foreach (var currentController in _controller.BoneControllers)
+            foreach (var controller in _avatarController.Controllers)
             {
                 using (Layout.Horizontal())
                 {
-                    Layout.Foldout(currentController.IsExpanded)
+                    Layout.Foldout(controller.IsExpanded)
                           .OnChanged(x => {
-                              currentController.IsExpanded = x;
+                              controller.IsExpanded = x;
                           });
-                    Layout.Toggle(currentController.IsEnabled)
+                    Layout.Toggle(controller.IsEnabled)
                             .OnChanged(x =>
                             {
-                                currentController.IsEnabled = x;
+                                controller.IsEnabled = x;
                             });
-                    Layout.Text(currentController.Name)
+                    Layout.Text(controller.Name)
                             .OnChanged(x =>
                             {
-                                currentController.Name = x;
+                                controller.Name = x;
                             });
-                    Layout.Slider(currentController.Value, 0, 100)
+                    Layout.Slider(controller.Value, 0, 100)
                         .OnChanged(x =>
                         {
-                            currentController.Value = x;
+                            controller.Value = x;
                         });
                     /*
                     if (DrawRemoveButton())
@@ -165,7 +165,7 @@ namespace Cubeage
                 }
 
 
-                if (currentController.IsExpanded)
+                if (controller.IsExpanded)
                 {
                     using (Layout.Indent())
                     using (Layout.Box())
@@ -174,27 +174,27 @@ namespace Cubeage
                         {
                             if (Layout.ToolbarButton("Reset"))
                             {
-                                currentController.SetToDefault();
+                                controller.SetToDefault();
                             }
                             if (Layout.ToolbarButton("Set Default"))
                             {
-                                currentController.SetDefault();
+                                controller.SetDefault();
                             }
                             Layout.FlexibleSpace();
 
                             if (Layout.ToolbarButton("Remove") && ConfirmRemove())
                             {
-                                _controller.Remove(currentController);
+                                _avatarController.Remove(controller);
                                 GUIUtility.ExitGUI();
                             }
                         }
-                        Layout.EnumToolbar(currentController.Mode).OnChanged(x =>
+                        Layout.EnumToolbar(controller.Mode).OnChanged(x =>
                         {
-                            currentController.Mode = x;
+                            controller.Mode = x;
                         });
 
-                        Layout.Label($"Bones ({currentController.Bones.Count})");
-                        foreach (var bone in currentController.Bones)
+                        Layout.Label($"Bones ({controller.Bones.Count})");
+                        foreach (var bone in controller.Bones)
                         {
                             using (Layout.Horizontal())
                             {
@@ -212,7 +212,7 @@ namespace Cubeage
                                 Layout.ObjectLabel(bone.Transform);
                                 if (Layout.MiniButton("Remove") && ConfirmRemove())
                                 {
-                                    currentController.Remove(bone);
+                                    controller.Remove(bone);
                                     GUIUtility.ExitGUI();
                                 }
                                 /*
@@ -229,7 +229,15 @@ namespace Cubeage
                             {
                                 using (Layout.Indent())
                                 {
-
+                                    using (Layout.Horizontal())
+                                    {
+                                        Layout.Label("Transform Children", GUILayout.MinWidth(50));
+                                        Layout.Toggle(bone.TransformChildren)
+                                                .OnChanged(x =>
+                                                {
+                                                    bone.TransformChildren = x;
+                                                });
+                                    }
 
                                     foreach (var type in EnumHelper.GetValues<TransformType>())
                                     {
@@ -240,7 +248,7 @@ namespace Cubeage
                                             {
                                                 foreach (var direction in EnumHelper.GetValues<Dimension>())
                                                 {
-                                                    DrawTransformController(bone, new Property(type, direction), currentController);
+                                                    DrawTransformController(bone, new Property(type, direction), controller);
                                                 }
                                             }
                                         }
@@ -258,7 +266,7 @@ namespace Cubeage
                                 {
                                     try
                                     {
-                                        currentController.Add(x);
+                                        controller.Add(x);
                                     }
                                     catch (Exception e)
                                     {
@@ -284,7 +292,7 @@ namespace Cubeage
             EditorUtility.DisplayDialog("Controller @ Cubeage", message, "Okay");
         }
 
-        void DrawTransformController(Bone bone, Property property, BoneController boneController)
+        void DrawTransformController(Bone bone, Property property, Controller boneController)
         {
             var entry = bone.Properties[property];
             using (Layout.SetEnable(entry.IsEnabled || bone.IsAvailable(property)))

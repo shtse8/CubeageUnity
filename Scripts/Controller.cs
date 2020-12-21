@@ -1,51 +1,50 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEditor;
+﻿using System.Collections.Generic;
 using UnityEngine;
-using UnityEditorInternal;
-using System.Linq;
 using System;
-
+using System.Linq;
+using UnityEditor;
 
 namespace Cubeage
 {
     [Serializable]
-    public struct TransformData
+    public class Controller
     {
-        public Vector3 localPosition;
-        public Vector3 localScale;
-        public Vector3 localEulerAngles;
-    }
-
-    [AddComponentMenu("Cubeage/Avatar Controller")]
-    public class Controller : MonoBehaviour
-    {
-        
-        public const string POSTFIX = "_ctrl";
-
-        #region Avatar
-        [SerializeReference]
         [SerializeField]
-        private GameObject _avatar;
+        [SerializeReference]
+        protected AvatarController _avatarController;
+        public AvatarController AvatarController => _avatarController;
 
-        public GameObject Avatar
+        [SerializeField]
+        private  string _name = "";
+        public string Name
         {
-            get => _avatar;
+            get => _name;
             set
             {
-                if (Equals(_avatar, value))
+                if (Equals(_name, value))
                     return;
-
-                _avatar = value;
-                UpdateValidBones();
+                Undo.RecordObject(_avatarController.RecordTarget, "Change Controller Name");
+                _name = value;
             }
         }
-        #endregion
+        [SerializeReference] 
+        [SerializeField]
+        protected List<Bone> _bones = new List<Bone>();
+        public List<Bone> Bones => _bones.ToList();
 
-        public Component RecordTarget => this;
+        [SerializeField]
+        protected float _defaultValue = 50;
+        public float DefaultValue {
+            get => _defaultValue;
+            set
+            {
+                if (Equals(_defaultValue, value))
+                    return;
+                Undo.RecordObject(_avatarController.RecordTarget, "Set Controller Default");
+                _defaultValue = value;
+            }
+        }
 
-
-        #region isEnabled
         [SerializeField]
         private bool _isEnabled = true;
 
@@ -57,135 +56,141 @@ namespace Cubeage
                 if (Equals(_isEnabled, value))
                     return;
 
+                Undo.RecordObject(_avatarController.RecordTarget, "Toggle Controller");
                 _isEnabled = value;
 
                 // Update Entries
-                foreach (var entry in _boneControllers.SelectMany(x => x.Bones).SelectMany(x => x.Properties.Values).Where(x => x.IsEnabled))
+                foreach (var entry in _bones.SelectMany(x => x.Properties.Values).Where(x => x.IsEnabled))
                 {
                     entry.Update();
                 }
             }
         }
 
-        #endregion
 
-        #region ValidBones
         [SerializeField]
-        private SerializableDictionary<Transform, TransformData> _validBones = new SerializableDictionary<Transform, TransformData>();
-        public IList<Transform> ValidBones => _validBones.Keys.ToArray();
-        #endregion
+        private float _value = 50;
 
-        #region BoneControllers
         [SerializeField]
-        [SerializeReference]
-        private List<BoneController> _boneControllers = new List<BoneController>();
-        public IList<BoneController> BoneControllers => _boneControllers.ToArray();
-        #endregion
+        private Mode _mode = Mode.View;
 
-        void Reset()
+        [SerializeField]
+        private bool _isExpanded = false;
+        public bool IsExpanded
         {
-            Avatar = gameObject;
-        }
-
-        #region private methods
-        void UpdateValidBones()
-        {
-            _validBones.Clear();
-            foreach (var transform in Avatar.GetComponentsInChildren<Transform>().Where(x => IsBone(x)))
+            get => _isExpanded;
+            set
             {
-                var data = GetData(transform);
-                _validBones.Add(transform, data);
+                if (Equals(_isExpanded, value))
+                    return;
+
+                Undo.RecordObject(_avatarController.RecordTarget, "Expand Controller");
+                _isExpanded = value;
+                if (!value)
+                    Mode = Mode.View;
             }
         }
-        TransformData GetData(Transform transform)
+        public float Value
         {
-            return new TransformData
+            get => _value;
+            set
             {
-                localPosition = transform.localPosition,
-                localEulerAngles = transform.localEulerAngles,
-                localScale = transform.localScale
-            };
+                if (Equals(_value, value))
+                    return;
+                Undo.RecordObject(_avatarController.RecordTarget, "Slide Controller");
+                
+                _value = value;
+
+                if (_value == 100)
+                    Mode = Mode.Max;
+                else if (_value == 0)
+                    Mode = Mode.Min;
+                else
+                    Mode = Mode.View;
+                Update();
+            }
         }
 
-        #endregion
-
-        #region public methods
-        public bool HasAnimator()
-        {
-            return _avatar.GetComponent<Animator>();
-            // foreach(var x  in controller.BoneControllers[0].Bones[0].Properties)
-            // {
-            //     Debug.Log(x.Key, x.Value);
-            // }
-            // Animator lAnimator = controller.gameObject.GetComponent<Animator>();
-            // Debug.Log(lAnimator);
-            // 
-            // Transform lBoneTransform = lAnimator.GetBoneTransform(HumanBodyBones.LeftFoot);
-            // 
-            // Debug.Log(lBoneTransform);
-        }
-
-        public bool TryGetTargetTransform(Transform transform, out Transform target)
-        {
-            target = null;
-            for (var i = 0; i < transform.childCount; i++)
+        public Mode Mode { 
+            get => _mode; 
+            set
             {
-                var child = transform.GetChild(i);
-                if (Equals(child.name + POSTFIX, transform.name))
+                if (Equals(_mode, value))
+                    return;
+
+                Undo.RecordObject(_avatarController.RecordTarget, "Change Mode");
+                switch (value)
                 {
-                    target = child;
-                    return true;
+                    case Mode.Max:
+                        Value = 100;
+                        break;
+                    case Mode.Min:
+                        Value = 0;
+                        break;
                 }
-            }
-            return false;
+                _mode = value;
+            } 
         }
 
-        public void Remove(BoneController controller)
+        public Controller(AvatarController avatarController, string name)
         {
-            Undo.RecordObject(RecordTarget, "Remove Controller");
-            controller.IsEnabled = false;
-            _boneControllers.Remove(controller);
+            _avatarController = avatarController;
+            _name = name;
         }
 
-        public void AddController()
+        public void Update()
         {
-            Undo.RecordObject(RecordTarget, "Add Controller");
-            _boneControllers.Add(new BoneController(this, $"Controller {_boneControllers.Count + 1}"));
-        }
-
-        public static bool IsBone(Component component)
-        {
-            return component.name.EndsWith(POSTFIX);
-        }
-
-        public void ResetBones()
-        {
-            Undo.RecordObject(RecordTarget, "Reset All Bones");
-
-            IsEnabled = false;
-            // Reset transform.
-            foreach ((var transform, var data) in _validBones)
+            foreach (var entry in _bones.SelectMany(x => x.Properties.Values).Where(x => x.IsEnabled))
             {
-                transform.localPosition = data.localPosition;
-                transform.localScale = data.localScale;
-                transform.localEulerAngles = data.localEulerAngles;
+                entry.Update();
             }
-            IsEnabled = true;
+        }
+
+        public void Add(Bone bone)
+        {
+            // Check Controller Part within the avatar
+            if (!_avatarController.Avatar.GetComponentsInChildren<Transform>().Contains(bone.Transform))
+            {
+                throw new Exception("This part doesn't belong to this avatar.");
+            }
+            // check duplicated part in the controller
+            else if (_bones.Select(x => x.Transform).Contains(bone.Transform))
+            {
+                throw new Exception("Duplicated part.");
+            }
+            else
+            {
+                _bones.Add(bone);
+            }
+        }
+
+        public void Add(Transform part)
+        {
+            if (!_avatarController.IsValidBone(part))
+                throw new Exception("Component is not valid.");
+
+            Undo.RecordObject(_avatarController.RecordTarget, "Add Bone");
+            Add(new Bone(this, part));
+        }
+
+        public void Remove(Bone bone)
+        {
+            Undo.RecordObject(_avatarController.RecordTarget, "Remove Bone");
+            bone.IsEnabled = false;
+            _bones.Remove(bone);
+        }
+
+        public void SetDefault()
+        {
+            DefaultValue = Value;
         }
 
         public void SetToDefault()
         {
-            Undo.RecordObject(RecordTarget, "Set All Controller To Default");
-            foreach (var controller in _boneControllers)
-            {
-                controller.SetToDefault();
-            }
+            Undo.RecordObject(_avatarController.RecordTarget, "Reset Controller");
+            Value = DefaultValue;
         }
-        public bool IsValidBone(Transform bone)
-        {
-            return _validBones.Contains(bone);
-        }
-        #endregion
+
     }
 
 }

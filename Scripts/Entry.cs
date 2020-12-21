@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEditor;
+using System.Linq;
 
 namespace Cubeage
 {
@@ -15,9 +16,12 @@ namespace Cubeage
         [SerializeField]
         protected Property _property;
 
+
+
+
         // IsEnabled
         [SerializeField]
-        public bool _isEnabled = false;
+        protected bool _isEnabled = false;
         public bool IsEnabled
         {
             get => _isEnabled;
@@ -26,7 +30,7 @@ namespace Cubeage
                 if (Equals(_isEnabled, value))
                     return;
 
-                Undo.RecordObject(_bone.BoneController.Controller.RecordTarget, "Toggle Property");
+                Undo.RecordObject(_bone.Controller.AvatarController.RecordTarget, "Toggle Property");
                 _isEnabled = value;
                 Update();
             }
@@ -44,7 +48,7 @@ namespace Cubeage
                 if (Equals(_min, value))
                     return;
 
-                Undo.RecordObject(_bone.BoneController.Controller.RecordTarget, "Change Min");
+                Undo.RecordObject(_bone.Controller.AvatarController.RecordTarget, "Change Min");
                 _min = value;
                 Update();
             }
@@ -61,7 +65,7 @@ namespace Cubeage
                 if (Equals(_max, value))
                     return;
 
-                Undo.RecordObject(_bone.BoneController.Controller.RecordTarget, "Change Max");
+                Undo.RecordObject(_bone.Controller.AvatarController.RecordTarget, "Change Max");
                 _max = value;
                 Update();
             }
@@ -71,18 +75,97 @@ namespace Cubeage
         // Value
         [SerializeField]
         protected float _value;
-        public float Value => IsOverallEnabled ? GetValue(_bone.BoneController.Value) : DefaultValue;
+        public float Value => IsOverallEnabled ? GetValue(_bone.Controller.Value) : DefaultValue;
 
         public bool IsOverallEnabled => _isEnabled
             && _bone.IsEnabled
-            && _bone.BoneController.IsEnabled
-            && _bone.BoneController.Controller.IsEnabled;
+            && _bone.Controller.IsEnabled
+            && _bone.Controller.AvatarController.IsEnabled;
 
         public float DefaultValue => _property.Type == TransformType.Scale ? 1 : 0;
 
+        public static void Update(AvatarController avatarController, Transform transform, Property property)
+        {
+            var value = avatarController.ValidBones[transform].Get(property);
+            foreach (var entry in avatarController.Controllers.SelectMany(x => x.Bones)
+                    .Where(x => Equals(x.Transform, transform))
+                    .Select(x => x.Properties[property])
+                    .Where(x => x.IsEnabled))
+            {
+                value = GetValue(property.Type, value, entry.Change);
+            }
+
+            // Find Parent Controller
+            var parent = transform.parent;
+            while (parent && !avatarController.ValidBones.ContainsKey(parent))
+            {
+                parent = parent.parent;
+            }
+            if (parent)
+            {
+                foreach (var entry in avatarController.Controllers.SelectMany(x => x.Bones)
+                    .Where(x => Equals(x.Transform, parent))
+                    .Where(x => !x.TransformChildren)
+                    .Select(x => x.Properties[property])
+                    .Where(x => x.IsEnabled))
+                {
+                    value = GetValue(property.Type, value, GetCounterChange(property.Type, entry.Change));
+                }
+            }
+
+            transform.Set(property, value);
+
+            // Update Children
+            foreach (var part in SearchBonesRecursive(avatarController, transform))
+            {
+                Update(avatarController, part, property);
+            }
+
+        }
+
+
+        // TODO: Optimize the update from origin and transform children
         public void Update()
         {
+            Update(_bone.Controller.AvatarController, _bone.Transform, _property);
+            // var origin = _bone.Controller.AvatarController.ValidBones[_bone.Transform].Get(_property);
+            // var value = GetValue(origin, Change);
+            // // Find Parent Controller
+            // var parent = _bone.Transform.parent;
+            // while (parent && _bone.Controller.AvatarController.ValidBones.ContainsKey(parent))
+            // {
+            //     parent = parent.parent;
+            // }
+            // if (parent)
+            // {
+            //     foreach(var entry in _bone.Controller.AvatarController.Controllers.SelectMany(x => x.Bones)
+            //         .Where(x => Equals(x.Transform, parent))
+            //         .Select(x => x.Properties[_property])
+            //         .Where(x => x.IsEnabled)) 
+            //     {
+            //         value = GetValue(value, GetCounterChange(_property, entry.Change));
+            //     }
+            // }
+            // _bone.Transform.transform.Set(_property, value);
+            // 
+            // _value = Value;
+            // 
+            // foreach (var part in SearchBonesRecursive(_bone.Transform))
+            // {
+            //     foreach (var entry in _bone.Controller.AvatarController.Controllers.SelectMany(x => x.Bones)
+            //             .Where(x => Equals(x.Transform, part))
+            //             .Select(x => x.Properties[_property])
+            //             .Where(x => x.IsEnabled))
+            //     {
+            // 
+            //         entry.Update();
+            //     }
+            // }
+
+            /*
             var change = GetChange(Value, _value);
+
+            // if (_bone.TransformChildren)
             TransformCounterBones(_property, change);
 
             var partValue = GetValue(_bone.Transform, change);
@@ -90,6 +173,7 @@ namespace Cubeage
             _bone.Transform.transform.Set(_property, partValue);
 
             _value = Value;
+            */
         }
 
         public Entry(Bone bone, Property property)
@@ -101,9 +185,22 @@ namespace Cubeage
             _value = DefaultValue;
         }
 
-        float GetValue(Component component, float change)
+        static float GetValue(TransformType type, float value, float change)
         {
-            var value = component.transform.Get(_property);
+            switch (type)
+            {
+                case TransformType.Position:
+                case TransformType.Rotation:
+                    return value + change;
+                case TransformType.Scale:
+                    return value * change;
+                default:
+                    throw new Exception("Unknown Type.");
+            }
+        }
+
+        float GetValue(float value, float change)
+        {
             switch (_property.Type)
             {
                 case TransformType.Position:
@@ -114,6 +211,12 @@ namespace Cubeage
                 default:
                     throw new Exception("Unknown Type.");
             }
+        }
+
+        float GetValue(Component component, float change)
+        {
+            var value = component.transform.Get(_property);
+            return GetValue(value, change);
         }
 
         public float Change => GetChange(Value, DefaultValue);
@@ -133,13 +236,27 @@ namespace Cubeage
         }
 
 
+        static IEnumerable<Transform> SearchBonesRecursive(AvatarController avatarController, Transform transform)
+        {
+            var bones = new List<Transform>();
+            for (var i = 0; i < transform.childCount; i++)
+            {
+                var child = transform.GetChild(i);
+                if (avatarController.ValidBones.ContainsKey(child))
+                    bones.Add(child);
+                else
+                    bones.AddRange(SearchBonesRecursive(avatarController, child));
+            }
+            return bones;
+        }
+
         IEnumerable<Transform> SearchBonesRecursive(Transform transform)
         {
             var bones = new List<Transform>();
             for (var i = 0; i < transform.childCount; i++)
             {
                 var child = transform.GetChild(i);
-                if (_bone.BoneController.Controller.ValidBones.Contains(child))
+                if (_bone.Controller.AvatarController.ValidBones.ContainsKey(child))
                     bones.Add(child);
                 else
                     bones.AddRange(SearchBonesRecursive(child));
@@ -149,7 +266,7 @@ namespace Cubeage
 
         void TransformCounterBones(Property property, float change)
         {
-            change = GetCounterChange(property, change);
+            change = GetCounterChange(property.Type, change);
             foreach (var part in SearchBonesRecursive(_bone.Transform))
             {
                 var newValue = GetValue(part, property, change);
@@ -173,9 +290,9 @@ namespace Cubeage
             }
         }
 
-        float GetCounterChange(Property property, float change)
+        static float GetCounterChange(TransformType type, float change)
         {
-            switch (property.Type)
+            switch (type)
             {
                 case TransformType.Position:
                 case TransformType.Rotation:

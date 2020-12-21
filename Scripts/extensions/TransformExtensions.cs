@@ -6,6 +6,36 @@ namespace Cubeage
 {
     public static class TransformExtensions
     {
+        public static float Get(this TransformData transform, Property property)
+        {
+            switch (property.Type)
+            {
+                case TransformType.Position:
+                    return transform.localPosition.Get(property.Dimension);
+                case TransformType.Rotation:
+                    return transform.localEulerAngles.Get(property.Dimension);
+                case TransformType.Scale:
+                    return transform.localScale.Get(property.Dimension);
+            }
+            return 0;
+        }
+
+        public static void Set(this TransformData transform, Property property, float value)
+        {
+            switch (property.Type)
+            {
+                case TransformType.Position:
+                    transform.localPosition = transform.localPosition.Set(property.Dimension, value);
+                    break;
+                case TransformType.Rotation:
+                    transform.localEulerAngles = transform.localEulerAngles.Set(property.Dimension, value);
+                    break;
+                case TransformType.Scale:
+                    transform.localScale = transform.localScale.Set(property.Dimension, value);
+                    break;
+            }
+        }
+
         public static float Get(this Transform transform, Property property)
         {
             switch (property.Type)
