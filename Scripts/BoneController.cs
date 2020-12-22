@@ -7,7 +7,7 @@ using UnityEditor;
 namespace Cubeage
 {
     [Serializable]
-    public class Bone
+    public class BoneController : IEquatable<BoneController>
     {
         [SerializeReference] 
         [SerializeField]
@@ -16,8 +16,8 @@ namespace Cubeage
 
         [SerializeReference] 
         [SerializeField]
-        protected Transform _transform;
-        public Transform Transform => _transform;
+        protected TransformHandler _transformHandler;
+        public TransformHandler TransformHandler => _transformHandler;
 
         [SerializeField]
         protected SerializableDictionary<Property, Entry> _properties = new SerializableDictionary<Property, Entry>();
@@ -37,11 +37,7 @@ namespace Cubeage
                 Undo.RecordObject(_controller.AvatarController.RecordTarget, "Toggle Transform Children");
                 _transformChildren = value;
 
-                // Update Entries
-                foreach (var entry in _properties.Values.Where(x => x.IsEnabled))
-                {
-                    entry.Update();
-                }
+                _transformHandler.Update(this);
             }
         }
 
@@ -60,17 +56,13 @@ namespace Cubeage
             }
         }
 
-        public Bone(Controller boneController, Transform part)
+        public BoneController(Controller boneController, TransformHandler transformHandler)
         {
             _controller = boneController;
-            _transform = part;
-            foreach (var type in EnumHelper.GetValues<TransformType>())
+            _transformHandler = transformHandler;
+            foreach (var property in Property.GetAll())
             {
-                foreach (var direction in EnumHelper.GetValues<Dimension>())
-                {
-                    var property = new Property(type, direction);
-                    _properties.Add(property, new Entry(this, property));
-                }
+                _properties.Add(property, new Entry(this, property));
             }
         }
 
@@ -88,19 +80,10 @@ namespace Cubeage
 
                 _isEnabled = value;
 
-                // Update Entries
-                foreach (var entry in _properties.Values.Where(x => x.IsEnabled))
-                {
-                    entry.Update();
-                }
+                _transformHandler.Update(this);
             }
         }
 
-
-        public bool IsValid()
-        {
-            return _transform;
-        }
 
         public bool IsAvailable(Property property)
         {
@@ -111,7 +94,10 @@ namespace Cubeage
             //     .All(x => !x.IsEnabled);
         }
 
-
+        public bool Equals(BoneController other)
+        {
+            return Equals(_controller, other._controller);
+        }
     }
 
 }

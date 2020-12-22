@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Cubeage
@@ -26,6 +27,19 @@ namespace Cubeage
         }
 
         public override string ToString() => $"{_type}{_dimension}";
+
+        public static IEnumerable<Property> GetAll()
+        {
+            var properties = new List<Property>();
+            foreach (var type in EnumHelper.GetValues<TransformType>())
+            {
+                foreach (var direction in EnumHelper.GetValues<Dimension>())
+                {
+                    properties.Add(new Property(type, direction));
+                }
+            }
+            return properties;
+        }
     }
 
 }

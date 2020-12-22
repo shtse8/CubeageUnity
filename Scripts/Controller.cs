@@ -29,8 +29,8 @@ namespace Cubeage
         }
         [SerializeReference] 
         [SerializeField]
-        protected List<Bone> _bones = new List<Bone>();
-        public List<Bone> Bones => _bones.ToList();
+        protected List<BoneController> _boneControllers = new List<BoneController>();
+        public List<BoneController> Bones => _boneControllers.ToList();
 
         [SerializeField]
         protected float _defaultValue = 50;
@@ -58,12 +58,7 @@ namespace Cubeage
 
                 Undo.RecordObject(_avatarController.RecordTarget, "Toggle Controller");
                 _isEnabled = value;
-
-                // Update Entries
-                foreach (var entry in _bones.SelectMany(x => x.Properties.Values).Where(x => x.IsEnabled))
-                {
-                    entry.Update();
-                }
+                Update();
             }
         }
 
@@ -86,10 +81,9 @@ namespace Cubeage
 
                 Undo.RecordObject(_avatarController.RecordTarget, "Expand Controller");
                 _isExpanded = value;
-                if (!value)
-                    Mode = Mode.View;
             }
         }
+
         public float Value
         {
             get => _value;
@@ -140,44 +134,29 @@ namespace Cubeage
 
         public void Update()
         {
-            foreach (var entry in _bones.SelectMany(x => x.Properties.Values).Where(x => x.IsEnabled))
-            {
-                entry.Update();
-            }
+            _avatarController.Manager.Update(_boneControllers);
         }
 
-        public void Add(Bone bone)
+        public void Add(Transform transform)
         {
-            // Check Controller Part within the avatar
-            if (!_avatarController.Avatar.GetComponentsInChildren<Transform>().Contains(bone.Transform))
-            {
-                throw new Exception("This part doesn't belong to this avatar.");
-            }
-            // check duplicated part in the controller
-            else if (_bones.Select(x => x.Transform).Contains(bone.Transform))
-            {
-                throw new Exception("Duplicated part.");
-            }
-            else
-            {
-                _bones.Add(bone);
-            }
-        }
-
-        public void Add(Transform part)
-        {
-            if (!_avatarController.IsValidBone(part))
+            if (!_avatarController.Manager.IsValid(transform))
                 throw new Exception("Component is not valid.");
 
+            TransformHandler handler;
+            if (!_avatarController.Manager.TryGet(transform, out handler))
+                throw new Exception("This part doesn't belong to this avatar.");
+
             Undo.RecordObject(_avatarController.RecordTarget, "Add Bone");
-            Add(new Bone(this, part));
+            _boneControllers.Add(handler.CreateBoneController(this));
         }
 
-        public void Remove(Bone bone)
+        public void Remove(BoneController bone)
         {
             Undo.RecordObject(_avatarController.RecordTarget, "Remove Bone");
             bone.IsEnabled = false;
-            _bones.Remove(bone);
+
+            bone.TransformHandler.RemoveBoneController(bone);
+            _boneControllers.Remove(bone);
         }
 
         public void SetDefault()
