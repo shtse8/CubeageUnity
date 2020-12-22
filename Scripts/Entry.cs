@@ -70,11 +70,7 @@ namespace Cubeage
                 _bone.TransformHandler.Update(_property);
             }
         }
-        // public float Origin;
 
-        // Value
-        [SerializeField]
-        protected float _value;
         public float Value => IsOverallEnabled ? GetValue(_bone.Controller.Value) : DefaultValue;
 
         public bool IsOverallEnabled => _isEnabled
@@ -92,7 +88,6 @@ namespace Cubeage
             _property = property;
             _min = DefaultValue;
             _max = DefaultValue;
-            _value = DefaultValue;
         }
 
         float GetChange(float value, float current)
