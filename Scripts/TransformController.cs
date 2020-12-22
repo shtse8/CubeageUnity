@@ -7,7 +7,7 @@ using UnityEditor;
 namespace Cubeage
 {
     [Serializable]
-    public class BoneController : IEquatable<BoneController>
+    public class TransformController : IEquatable<TransformController>
     {
         [SerializeReference] 
         [SerializeField]
@@ -56,7 +56,7 @@ namespace Cubeage
             }
         }
 
-        public BoneController(Controller boneController, TransformHandler transformHandler)
+        public TransformController(Controller boneController, TransformHandler transformHandler)
         {
             _controller = boneController;
             _transformHandler = transformHandler;
@@ -94,7 +94,25 @@ namespace Cubeage
             //     .All(x => !x.IsEnabled);
         }
 
-        public bool Equals(BoneController other)
+        public Transform Transform
+        {
+            get => _transformHandler?.Transform;
+            set
+            {
+                var handler = _controller.AvatarController.Manager.Get(value);
+                if (!Equals(_transformHandler, handler))
+                {
+                    Debug.Log("Update Target");
+                    _transformHandler?.RemoveTransformController(this);
+                    Debug.Log(_transformHandler?.BoneControllers.Count);
+                    Undo.RecordObject(_controller.AvatarController.RecordTarget, "Set Bone");
+                    _transformHandler = handler;
+                    handler.AddTransformController(this);
+                }
+            }
+        }
+
+        public bool Equals(TransformController other)
         {
             return Equals(_controller, other._controller);
         }

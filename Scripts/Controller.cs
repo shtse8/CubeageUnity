@@ -29,8 +29,8 @@ namespace Cubeage
         }
         [SerializeReference] 
         [SerializeField]
-        protected List<BoneController> _boneControllers = new List<BoneController>();
-        public List<BoneController> Bones => _boneControllers.ToList();
+        protected List<TransformController> _boneControllers = new List<TransformController>();
+        public List<TransformController> Bones => _boneControllers.ToList();
 
         [SerializeField]
         protected float _defaultValue = 50;
@@ -139,24 +139,18 @@ namespace Cubeage
 
         public void Add(Transform transform)
         {
-            if (!_avatarController.Manager.IsValid(transform))
-                throw new Exception("Component is not valid.");
-
-            TransformHandler handler;
-            if (!_avatarController.Manager.TryGet(transform, out handler))
-                throw new Exception("This part doesn't belong to this avatar.");
-
+            var handler = _avatarController.Manager.Get(transform);
             Undo.RecordObject(_avatarController.RecordTarget, "Add Bone");
-            _boneControllers.Add(handler.CreateBoneController(this));
+            _boneControllers.Add(handler.CreateTransformController(this));
         }
 
-        public void Remove(BoneController bone)
+        public void Remove(TransformController controller)
         {
             Undo.RecordObject(_avatarController.RecordTarget, "Remove Bone");
-            bone.IsEnabled = false;
+            controller.IsEnabled = false;
 
-            bone.TransformHandler.RemoveBoneController(bone);
-            _boneControllers.Remove(bone);
+            controller.TransformHandler.RemoveTransformController(controller);
+            _boneControllers.Remove(controller);
         }
 
         public void SetDefault()

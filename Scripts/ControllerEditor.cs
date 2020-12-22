@@ -206,7 +206,10 @@ namespace Cubeage
                                         {
                                             bone.IsEnabled = x;
                                         });
-                                Layout.ObjectLabel(bone.TransformHandler.Transform);
+                                Layout.Object(bone.Transform).OnChanged(x =>
+                                {
+                                    bone.Transform = x;
+                                });
                                 if (Layout.MiniButton("Remove") && ConfirmRemove())
                                 {
                                     controller.Remove(bone);
@@ -289,7 +292,7 @@ namespace Cubeage
             EditorUtility.DisplayDialog("Controller @ Cubeage", message, "Okay");
         }
 
-        void DrawTransformController(BoneController bone, Property property, Controller boneController)
+        void DrawTransformController(TransformController bone, Property property, Controller boneController)
         {
             var entry = bone.Properties[property];
             using (Layout.SetEnable(entry.IsEnabled || bone.IsAvailable(property)))

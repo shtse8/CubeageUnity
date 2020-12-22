@@ -11,7 +11,7 @@ namespace Cubeage
     {
         [SerializeReference]
         [SerializeField]
-        protected BoneController _bone;
+        protected TransformController _bone;
 
         [SerializeField]
         protected Property _property;
@@ -86,7 +86,7 @@ namespace Cubeage
 
         public float Change => GetChange(Value, DefaultValue);
 
-        public Entry(BoneController bone, Property property)
+        public Entry(TransformController bone, Property property)
         {
             _bone = bone;
             _property = property;

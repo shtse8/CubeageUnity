@@ -28,6 +28,17 @@ namespace Cubeage
             return transform.name.EndsWith(_suffix);
         }
 
+        public TransformHandler Get(Transform transform)
+        {
+            if (!IsValid(transform))
+                throw new Exception("Component is not valid.");
+
+            if (!TryGet(transform, out var handler))
+                throw new Exception("This part doesn't belong to this avatar.");
+
+            return handler;
+        }
+
         public bool TryGet(Transform transform, out TransformHandler handler)
         {
             handler = _handlers.FirstOrDefault(x => Equals(transform, x.Transform));
@@ -48,10 +59,11 @@ namespace Cubeage
             }
         }
 
-        public void Update(IEnumerable<BoneController> boneControllers)
+        public void Update(IEnumerable<TransformController> boneControllers)
         {
             foreach (var handler in _handlers.Where(x => x.BoneControllers.Intersect(boneControllers).Any()))
             {
+                Debug.Log(handler.Transform.name);
                 handler.Update();
             }
         }

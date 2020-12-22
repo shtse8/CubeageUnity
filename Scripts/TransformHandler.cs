@@ -36,8 +36,8 @@ namespace Cubeage
 
         [SerializeField]
         [SerializeReference]
-        protected List<BoneController> _boneControllers = new List<BoneController>();
-        public List<BoneController> BoneControllers => _boneControllers.ToList();
+        protected List<TransformController> _boneControllers = new List<TransformController>();
+        public List<TransformController> BoneControllers => _boneControllers.ToList();
 
         [SerializeField]
         [SerializeReference]
@@ -71,18 +71,25 @@ namespace Cubeage
         }
 
 
-        public BoneController CreateBoneController(Controller controller)
+        public TransformController CreateTransformController(Controller controller)
         {
-            var boneController = new BoneController(controller, this);
-            if (_boneControllers.Contains(boneController))
-                throw new Exception("Duplicated bone controller.");
-            _boneControllers.Add(boneController);
+            var boneController = new TransformController(controller, this);
+            AddTransformController(boneController);
             return boneController;
         }
 
-        public void RemoveBoneController(BoneController bone)
+        public void RemoveTransformController(TransformController controller)
         {
-            _boneControllers.Remove(bone);
+            _boneControllers.Remove(controller);
+            Update();
+        }
+
+        public void AddTransformController(TransformController controller)
+        {
+            if (_boneControllers.Contains(controller))
+                throw new Exception("Duplicated bone controller.");
+            _boneControllers.Add(controller);
+            Update();
         }
 
         public bool IsValid()
@@ -99,7 +106,7 @@ namespace Cubeage
             }
         }
 
-        public void Update(BoneController boneController)
+        public void Update(TransformController boneController)
         {
             foreach (var property in boneController.Properties.Values.Where(x => x.IsEnabled).Select(x => x.Property))
             {
