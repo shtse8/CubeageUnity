@@ -63,7 +63,6 @@ namespace Cubeage
         {
             foreach (var handler in _handlers.Where(x => x.BoneControllers.Intersect(boneControllers).Any()))
             {
-                Debug.Log(handler.Transform.name);
                 handler.Update();
             }
         }
