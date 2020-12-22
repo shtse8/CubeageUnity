@@ -113,12 +113,15 @@ namespace Cubeage
                 }
             }
 
-            transform.Set(property, value);
-
-            // Update Children
-            foreach (var part in SearchBonesRecursive(avatarController, transform))
+            if (!Equals(transform.Get(property), value))
             {
-                Update(avatarController, part, property);
+                transform.Set(property, value);
+
+                // Update Children
+                foreach (var part in SearchBonesRecursive(avatarController, transform))
+                {
+                    Update(avatarController, part, property);
+                }
             }
 
         }
