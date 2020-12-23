@@ -71,6 +71,15 @@ namespace Cubeage
             EditorGUILayout.Space();
         }
 
+        public static IDisposable Vertical()
+        {
+            var disposable = new GUILayout.VerticalScope();
+            return Disposable.Create(() =>
+            {
+                disposable.Dispose();
+            });
+        }
+
         public static IDisposable Horizontal()
         {
             var disposable = new GUILayout.HorizontalScope();

@@ -240,21 +240,20 @@ namespace Cubeage
                                 {
                                     using (Layout.Horizontal())
                                     {
-                                        Layout.Label("Transform Children", GUILayout.MinWidth(50));
+                                        Layout.Label("Transform", GUILayout.MinWidth(50));
+                                        Layout.FlexibleSpace();
                                         Layout.Toggle(bone.TransformChildren)
                                                 .OnChanged(x =>
                                                 {
                                                     bone.TransformChildren = x;
                                                 });
-                                    }
-                                    using (Layout.Horizontal())
-                                    {
-                                        Layout.Label("Transform Siblings", GUILayout.MinWidth(50));
+                                        Layout.Label("Children", GUILayout.MinWidth(50), GUILayout.MaxWidth(120));
                                         Layout.Toggle(bone.TransformSiblings)
                                                 .OnChanged(x =>
                                                 {
                                                     bone.TransformSiblings = x;
                                                 });
+                                        Layout.Label("Siblings", GUILayout.MinWidth(50), GUILayout.MaxWidth(120));
                                     }
 
                                     foreach (var type in EnumHelper.GetValues<TransformType>())
