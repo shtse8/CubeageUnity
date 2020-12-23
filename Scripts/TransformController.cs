@@ -37,7 +37,24 @@ namespace Cubeage
                 Undo.RecordObject(_controller.AvatarController.RecordTarget, "Toggle Transform Children");
                 _transformChildren = value;
 
-                _transformHandler.Update(this);
+                _transformHandler.Update(this, UpdateHints.UpdatedTransformChildren);
+            }
+        }
+
+        [SerializeField]
+        protected bool _transformSiblings = false;
+        public bool TransformSiblings
+        {
+            get => _transformSiblings;
+            set
+            {
+                if (Equals(_transformSiblings, value))
+                    return;
+
+                Undo.RecordObject(_controller.AvatarController.RecordTarget, "Toggle Transform Siblings");
+                _transformSiblings = value;
+
+                _transformHandler.Update(this, UpdateHints.UpdatedTransformSiblings);
             }
         }
 
@@ -80,7 +97,7 @@ namespace Cubeage
 
                 _isEnabled = value;
 
-                _transformHandler.Update(this);
+                _transformHandler.Update(this, UpdateHints.ToggledEnable);
             }
         }
 

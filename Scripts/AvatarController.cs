@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 using UnityEditorInternal;
-
+using System.Linq;
 
 namespace Cubeage
 {
@@ -53,7 +53,7 @@ namespace Cubeage
 
                 _isEnabled = value;
 
-                _manager.Update();
+                _manager.Update(_controllers.Where(x => x.IsEnabled).SelectMany(x => x.BoneControllers), UpdateHints.ToggledEnable);
             }
         }
 

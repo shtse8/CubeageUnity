@@ -39,6 +39,15 @@ namespace Cubeage
 
         public override void OnInspectorGUI()
         {
+            using (Layout.Horizontal())
+            {
+                Layout.Label("Enable");
+                Layout.Toggle(_avatarController.IsEnabled)
+                    .OnChanged(x =>
+                    {
+                        _avatarController.IsEnabled = x;
+                    });
+            }
             // using (Layout.Horizontal())
             // {
             //     Layout.Label("Target Avatar");
@@ -190,8 +199,8 @@ namespace Cubeage
                         });
 
 
-                        Layout.Label($"Bones ({controller.Bones.Count})");
-                        foreach (var bone in controller.Bones)
+                        Layout.Label($"Bones ({controller.BoneControllers.Count})");
+                        foreach (var bone in controller.BoneControllers)
                         {
                             using (Layout.Horizontal())
                             {
@@ -236,6 +245,15 @@ namespace Cubeage
                                                 .OnChanged(x =>
                                                 {
                                                     bone.TransformChildren = x;
+                                                });
+                                    }
+                                    using (Layout.Horizontal())
+                                    {
+                                        Layout.Label("Transform Siblings", GUILayout.MinWidth(50));
+                                        Layout.Toggle(bone.TransformSiblings)
+                                                .OnChanged(x =>
+                                                {
+                                                    bone.TransformSiblings = x;
                                                 });
                                     }
 

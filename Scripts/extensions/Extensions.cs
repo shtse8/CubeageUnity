@@ -64,6 +64,10 @@ namespace Cubeage
                 throw new Exception($"Unsupported Expression Body Type");
             }
         }
+        public static IEnumerable<T> Yield<T>(this T item)
+        {
+            yield return item;
+        }
     }
 
     public static class EnumHelper

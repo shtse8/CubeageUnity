@@ -30,7 +30,7 @@ namespace Cubeage
         [SerializeReference] 
         [SerializeField]
         protected List<TransformController> _boneControllers = new List<TransformController>();
-        public List<TransformController> Bones => _boneControllers.ToList();
+        public List<TransformController> BoneControllers => _boneControllers.ToList();
 
         [SerializeField]
         protected float _defaultValue = 50;
@@ -58,7 +58,7 @@ namespace Cubeage
 
                 Undo.RecordObject(_avatarController.RecordTarget, "Toggle Controller");
                 _isEnabled = value;
-                Update();
+                _avatarController.Manager.Update(_boneControllers, UpdateHints.ToggledEnable);
             }
         }
 
@@ -101,7 +101,8 @@ namespace Cubeage
                     Mode = Mode.Min;
                 else
                     Mode = Mode.View;
-                Update();
+
+                _avatarController.Manager.Update(_boneControllers, UpdateHints.UpdatedChange);
             }
         }
 
@@ -130,11 +131,6 @@ namespace Cubeage
         {
             _avatarController = avatarController;
             _name = name;
-        }
-
-        public void Update()
-        {
-            _avatarController.Manager.Update(_boneControllers);
         }
 
         public void Add(Transform transform)

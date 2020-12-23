@@ -59,11 +59,13 @@ namespace Cubeage
             }
         }
 
-        public void Update(IEnumerable<TransformController> boneControllers)
+        public void Update(IEnumerable<TransformController> boneControllers, UpdateHints? hint = null)
         {
+            if (hint == UpdateHints.UpdatedChange)
+                boneControllers = boneControllers.Where(x => x.IsEnabled);
             foreach (var handler in _handlers.Where(x => x.BoneControllers.Intersect(boneControllers).Any()))
             {
-                handler.Update();
+                handler.Update(boneControllers, hint);
             }
         }
 
