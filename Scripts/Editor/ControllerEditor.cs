@@ -5,6 +5,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System;
 using System.Reflection;
+using System.Linq;
 
 namespace Cubeage
 {
@@ -32,6 +33,11 @@ namespace Cubeage
             }) && ConfirmRemove();
         }
 
+        void RecordUndo(string name)
+        {
+            Undo.RecordObjects(_avatarController.Manager.Handlers.Select(x => x.Transform).Cast<UnityEngine.Object>().Prepend(_avatarController).ToArray(), name);
+        }
+
         bool ConfirmRemove()
         {
             return Confirm("Are you sure want to remove?");
@@ -45,6 +51,7 @@ namespace Cubeage
                 Layout.Toggle(_avatarController.IsEnabled)
                     .OnChanged(x =>
                     {
+                        RecordUndo("Toggle Avatar Controller");
                         _avatarController.IsEnabled = x;
                     });
             }
@@ -134,6 +141,7 @@ namespace Cubeage
                                             {
                                                 try
                                                 {
+                                                    RecordUndo("Add Virtual Child");
                                                     handler.AddVirtualChild(x);
                                                 }
                                                 catch (Exception e)
@@ -155,10 +163,12 @@ namespace Cubeage
             {
                 if (Layout.ToolbarButton("Add Controller"))
                 {
+                    RecordUndo("Add Controller");
                     _avatarController.AddController();
                 }
                 if (Layout.ToolbarButton("Set All To Default"))
                 {
+                    RecordUndo("Set All Controllers To Default");
                     _avatarController.SetToDefault();
                 }
                 Layout.FlexibleSpace();
@@ -184,21 +194,25 @@ namespace Cubeage
                 {
                     Layout.Foldout(controller.IsExpanded)
                           .OnChanged(x => {
+                              RecordUndo("Expand Controller");
                               controller.IsExpanded = x;
                           });
                     Layout.Toggle(controller.IsEnabled)
                             .OnChanged(x =>
                             {
+                                RecordUndo("Toggle Controller");
                                 controller.IsEnabled = x;
                             });
                     Layout.Text(controller.Name)
                             .OnChanged(x =>
                             {
+                                RecordUndo("Change Controller Name");
                                 controller.Name = x;
                             });
                     Layout.Slider(controller.Value, 0, 100)
                         .OnChanged(x =>
                         {
+                            RecordUndo("Slide Controller");
                             controller.Value = x;
                         });
                     /*
@@ -221,22 +235,26 @@ namespace Cubeage
                         {
                             if (Layout.ToolbarButton("Reset"))
                             {
+                                RecordUndo("Reset Controller");
                                 controller.SetToDefault();
                             }
                             if (Layout.ToolbarButton("Set Default"))
                             {
+                                RecordUndo("Set Default");
                                 controller.SetDefault();
                             }
                             Layout.FlexibleSpace();
 
                             if (Layout.ToolbarButton("Remove") && ConfirmRemove())
                             {
+                                RecordUndo("Remove Controller");
                                 _avatarController.Remove(controller);
                                 GUIUtility.ExitGUI();
                             }
                         }
                         Layout.EnumToolbar(controller.Mode).OnChanged(x =>
                         {
+                            RecordUndo("Change Mode");
                             controller.Mode = x;
                         });
 
@@ -249,20 +267,24 @@ namespace Cubeage
                                 Layout.Foldout(bone.IsExpanded)
                                     .OnChanged(x =>
                                     {
+                                        RecordUndo("Expand Transform Controller");
                                         bone.IsExpanded = x;
                                     });
 
                                 Layout.Toggle(bone.IsEnabled)
                                         .OnChanged(x =>
                                         {
+                                            RecordUndo("Toggle Transform Controller");
                                             bone.IsEnabled = x;
                                         });
                                 Layout.Object(bone.Transform).OnChanged(x =>
                                 {
+                                    RecordUndo("Set Tarnsform Target");
                                     bone.Transform = x;
                                 });
                                 if (Layout.MiniButton("Remove") && ConfirmRemove())
                                 {
+                                    RecordUndo("Remove Tarnsform Controller");
                                     controller.Remove(bone);
                                     GUIUtility.ExitGUI();
                                 }
@@ -287,12 +309,14 @@ namespace Cubeage
                                         Layout.Toggle(bone.TransformChildren)
                                                 .OnChanged(x =>
                                                 {
+                                                    RecordUndo("Toggle Transform Children");
                                                     bone.TransformChildren = x;
                                                 });
                                         Layout.Label("Children", GUILayout.MinWidth(50), GUILayout.MaxWidth(120));
                                         Layout.Toggle(bone.TransformSiblings)
                                                 .OnChanged(x =>
                                                 {
+                                                    RecordUndo("Toggle Transform Siblings");
                                                     bone.TransformSiblings = x;
                                                 });
                                         Layout.Label("Siblings", GUILayout.MinWidth(50), GUILayout.MaxWidth(120));
@@ -325,6 +349,7 @@ namespace Cubeage
                                 {
                                     try
                                     {
+                                        RecordUndo("Add Transform Controller");
                                         controller.Add(x);
                                     }
                                     catch (Exception e)
@@ -359,6 +384,7 @@ namespace Cubeage
                 Layout.Toggle(entry.IsEnabled)
                         .OnChanged(x =>
                         {
+                            RecordUndo("Toggle Property");
                             entry.IsEnabled = x;
                         });
             }
@@ -384,12 +410,14 @@ namespace Cubeage
                     case Mode.Min:
                         floatField.OnChanged(x =>
                             {
+                                RecordUndo("Set Min");
                                 entry.Min = x;
                             });
                         break;
                     case Mode.Max:
                         floatField.OnChanged(x =>
                             {
+                                RecordUndo("Set Max");
                                 entry.Max = x;
                             });
                         break;

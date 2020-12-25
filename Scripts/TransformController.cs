@@ -34,7 +34,6 @@ namespace Cubeage
                 if (Equals(_transformChildren, value))
                     return;
 
-                Undo.RecordObject(_controller.AvatarController.RecordTarget, "Toggle Transform Children");
                 _transformChildren = value;
 
                 _transformHandler.Update(this, UpdateHints.UpdatedTransformChildren);
@@ -51,7 +50,6 @@ namespace Cubeage
                 if (Equals(_transformSiblings, value))
                     return;
 
-                Undo.RecordObject(_controller.AvatarController.RecordTarget, "Toggle Transform Siblings");
                 _transformSiblings = value;
 
                 _transformHandler.Update(this, UpdateHints.UpdatedTransformSiblings);
@@ -68,7 +66,6 @@ namespace Cubeage
                 if (Equals(_isExpanded, value))
                     return;
 
-                Undo.RecordObject(_controller.AvatarController.RecordTarget, "Expand Bone");
                 _isExpanded = value;
             }
         }
@@ -92,8 +89,6 @@ namespace Cubeage
             {
                 if (Equals(_isEnabled, value))
                     return;
-
-                Undo.RecordObject(_controller.AvatarController.RecordTarget, "Toggle Bone");
 
                 _isEnabled = value;
 
@@ -119,10 +114,7 @@ namespace Cubeage
                 var handler = _controller.AvatarController.Manager.Get(value);
                 if (!Equals(_transformHandler, handler))
                 {
-                    Debug.Log("Update Target");
                     _transformHandler?.RemoveTransformController(this);
-                    Debug.Log(_transformHandler?.BoneControllers.Count);
-                    Undo.RecordObject(_controller.AvatarController.RecordTarget, "Set Bone");
                     _transformHandler = handler;
                     handler.AddTransformController(this);
                 }

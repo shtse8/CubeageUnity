@@ -23,7 +23,7 @@ namespace Cubeage
             {
                 if (Equals(_name, value))
                     return;
-                Undo.RecordObject(_avatarController.RecordTarget, "Change Controller Name");
+
                 _name = value;
             }
         }
@@ -40,7 +40,7 @@ namespace Cubeage
             {
                 if (Equals(_defaultValue, value))
                     return;
-                Undo.RecordObject(_avatarController.RecordTarget, "Set Controller Default");
+
                 _defaultValue = value;
             }
         }
@@ -56,7 +56,6 @@ namespace Cubeage
                 if (Equals(_isEnabled, value))
                     return;
 
-                Undo.RecordObject(_avatarController.RecordTarget, "Toggle Controller");
                 _isEnabled = value;
                 _avatarController.Manager.Update(_boneControllers, UpdateHints.ToggledEnable);
             }
@@ -79,7 +78,6 @@ namespace Cubeage
                 if (Equals(_isExpanded, value))
                     return;
 
-                Undo.RecordObject(_avatarController.RecordTarget, "Expand Controller");
                 _isExpanded = value;
             }
         }
@@ -91,7 +89,6 @@ namespace Cubeage
             {
                 if (Equals(_value, value))
                     return;
-                Undo.RecordObject(_avatarController.RecordTarget, "Slide Controller");
                 
                 _value = value;
 
@@ -113,7 +110,6 @@ namespace Cubeage
                 if (Equals(_mode, value))
                     return;
 
-                Undo.RecordObject(_avatarController.RecordTarget, "Change Mode");
                 switch (value)
                 {
                     case Mode.Max:
@@ -136,13 +132,11 @@ namespace Cubeage
         public void Add(Transform transform)
         {
             var handler = _avatarController.Manager.Get(transform);
-            Undo.RecordObject(_avatarController.RecordTarget, "Add Bone");
             _boneControllers.Add(handler.CreateTransformController(this));
         }
 
         public void Remove(TransformController controller)
         {
-            Undo.RecordObject(_avatarController.RecordTarget, "Remove Bone");
             controller.IsEnabled = false;
 
             controller.TransformHandler.RemoveTransformController(controller);
@@ -156,7 +150,6 @@ namespace Cubeage
 
         public void SetToDefault()
         {
-            Undo.RecordObject(_avatarController.RecordTarget, "Reset Controller");
             Value = DefaultValue;
         }
 

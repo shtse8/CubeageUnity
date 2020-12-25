@@ -1,8 +1,6 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
-using UnityEditorInternal;
 using System.Linq;
 
 namespace Cubeage
@@ -75,20 +73,17 @@ namespace Cubeage
 
         public void Remove(Controller controller)
         {
-            Undo.RecordObject(RecordTarget, "Remove Controller");
             controller.IsEnabled = false;
             _controllers.Remove(controller);
         }
 
         public void AddController()
         {
-            Undo.RecordObject(RecordTarget, "Add Controller");
             _controllers.Add(new Controller(this, $"Controller {_controllers.Count + 1}"));
         }
 
         public void SetToDefault()
         {
-            Undo.RecordObject(RecordTarget, "Set All Controller To Default");
             foreach (var controller in _controllers)
             {
                 controller.SetToDefault();

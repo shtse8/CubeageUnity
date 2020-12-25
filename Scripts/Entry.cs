@@ -30,7 +30,6 @@ namespace Cubeage
                 if (Equals(_isEnabled, value))
                     return;
 
-                Undo.RecordObject(_bone.Controller.AvatarController.RecordTarget, "Toggle Property");
                 _isEnabled = value;
                 _bone.TransformHandler.Update(_property, UpdateHints.ToggledEnable);
             }
@@ -48,7 +47,6 @@ namespace Cubeage
                 if (Equals(_min, value))
                     return;
 
-                Undo.RecordObject(_bone.Controller.AvatarController.RecordTarget, "Change Min");
                 _min = value;
                 _bone.TransformHandler.Update(_property, UpdateHints.UpdatedChange);
             }
@@ -65,7 +63,6 @@ namespace Cubeage
                 if (Equals(_max, value))
                     return;
 
-                Undo.RecordObject(_bone.Controller.AvatarController.RecordTarget, "Change Max");
                 _max = value;
                 _bone.TransformHandler.Update(_property, UpdateHints.UpdatedChange);
             }
