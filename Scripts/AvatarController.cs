@@ -31,7 +31,7 @@ namespace Cubeage
                     return;
 
                 _avatar = value;
-                _manager.Build(_avatar.transform);
+                _manager.Root = _avatar.transform;
             }
         }
         #endregion

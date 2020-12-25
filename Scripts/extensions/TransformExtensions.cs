@@ -6,14 +6,20 @@ namespace Cubeage
 {
     public static class TransformExtensions
     {
-        public static float Get(this TransformData transform, Property property)
+        public static float Get(this TransformData transform, Property property, bool global = false)
         {
             switch (property.Type)
             {
                 case TransformType.Position:
-                    return transform.localPosition.Get(property.Dimension);
+                    if (global)
+                        return transform.position.Get(property.Dimension);
+                    else
+                        return transform.localPosition.Get(property.Dimension);
                 case TransformType.Rotation:
-                    return transform.localEulerAngles.Get(property.Dimension);
+                    if (global)
+                        return transform.eulerAngles.Get(property.Dimension);
+                    else
+                        return transform.localEulerAngles.Get(property.Dimension);
                 case TransformType.Scale:
                     return transform.localScale.Get(property.Dimension);
             }

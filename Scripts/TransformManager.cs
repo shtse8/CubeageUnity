@@ -13,6 +13,21 @@ namespace Cubeage
         protected string _suffix;
         public string Suffix => _suffix;
 
+        [SerializeField]
+        protected Transform _root;
+        public Transform Root {
+            get => _root;
+            set
+            {
+                if (Equals(_root, value))
+                    return;
+
+                _root = value;
+                _handlers.Clear();
+                _handlers.AddRange(_root.GetComponentsInChildren<Transform>().Where(x => IsValid(x)).Select(x => new TransformHandler(this, x)));
+            }
+        }
+
         [SerializeReference]
         [SerializeField]
         protected List<TransformHandler> _handlers = new List<TransformHandler>();
@@ -45,11 +60,6 @@ namespace Cubeage
             return handler != null;
         }
 
-        public void Build(Transform root)
-        {
-            _handlers.Clear();
-            _handlers.AddRange(root.GetComponentsInChildren<Transform>().Where(x => IsValid(x)).Select(x => new TransformHandler(this, x)));
-        }
 
         public void Update()
         {

@@ -43,17 +43,39 @@ namespace Cubeage
         public IEnumerable<TransformHandler> Children => GetChildren(_transform);
 
         [SerializeField]
+        private bool _isExpanded = false;
+        public bool IsExpanded
+        {
+            get => _isExpanded;
+            set
+            {
+                if (Equals(_isExpanded, value))
+                    return;
+
+                _isExpanded = value;
+            }
+        }
+
+        [SerializeField]
         [SerializeReference]
         protected Transform _transform;
         public Transform Transform => _transform;
 
         [SerializeField]
         protected TransformData _data;
+        public TransformData Data => _data;
 
         [SerializeField]
         [SerializeReference]
         protected List<TransformController> _boneControllers = new List<TransformController>();
         public List<TransformController> BoneControllers => _boneControllers.ToList();
+
+        public IEnumerable<TransformHandler> VirtualParents => _manager.Handlers.Where(x => x.VirtualChildren.Contains(this));
+
+        [SerializeField]
+        [SerializeReference]
+        protected List<TransformHandler> _virtualChildren = new List<TransformHandler>();
+        public List<TransformHandler> VirtualChildren => _virtualChildren.ToList();
 
         [SerializeField]
         [SerializeReference]
@@ -76,15 +98,39 @@ namespace Cubeage
         {
             _manager = manager;
             _transform = transform;
+            if (_transform.name == "LianJia_L_ctrl")
+            {
+                Debug.Log(GetRelativePosition(_transform.parent, _transform.position).x);
+                Debug.Log(_transform.localPosition.x);
+
+            }
             _data = new TransformData
             {
                 localPosition = transform.localPosition,
                 localEulerAngles = transform.localEulerAngles,
-                localScale = transform.localScale
+                localScale = transform.localScale,
+                position = GetRelativePosition(_manager.Root.transform, transform.position),
+                eulerAngles = transform.eulerAngles - _manager.Root.transform.eulerAngles,
+                // scale = transform.lossyScale / _manager.Root.transform.lossyScale
             };
 
         }
 
+        public static Vector3 GetRelativePosition(Transform origin, Vector3 position)
+        {
+            Vector3 distance = position - origin.position;
+            Vector3 relativePosition = Vector3.zero;
+            relativePosition.x = Vector3.Dot(distance, origin.right.normalized);
+            relativePosition.y = Vector3.Dot(distance, origin.up.normalized);
+            relativePosition.z = Vector3.Dot(distance, origin.forward.normalized);
+            if (distance != relativePosition)
+            {
+                Debug.Log(distance.x + ", " + distance.y + ", " + distance.z);
+                Debug.Log(origin.right.normalized.x + ", " + origin.right.normalized.y + ", " + origin.right.normalized.z);
+                Debug.Log(relativePosition.x + ", " + relativePosition.y + ", " + relativePosition.z);
+            }
+            return relativePosition;
+        }
 
         public TransformController CreateTransformController(Controller controller)
         {
@@ -105,6 +151,22 @@ namespace Cubeage
                 throw new Exception("Duplicated bone controller.");
             _boneControllers.Add(controller);
             Update(controller, UpdateHints.ToggledEnable);
+        }
+
+        public void AddVirtualChild(Transform transform)
+        {
+            if (!_manager.TryGet(transform, out var handler))
+                throw new Exception("Not a valid child.");
+            if (_virtualChildren.Contains(handler))
+                throw new Exception("Duplicated child");
+            _virtualChildren.Add(handler);
+            handler.Update();
+        }
+
+        public void RemoveVirtualChild(TransformHandler handler)
+        {
+            _virtualChildren.Remove(handler);
+            handler.Update();
         }
 
         public bool IsValid()
@@ -152,7 +214,7 @@ namespace Cubeage
             
 
             // Siblings
-            foreach (var entry in Siblings.SelectMany(x => x._boneControllers)
+            foreach (var entry in VirtualParents.SelectMany(x => x._boneControllers)
                 .Where(x => x.TransformSiblings)
                 .Select(x => x.Properties[property])
                 .Where(x => x.IsOverallEnabled))
@@ -163,12 +225,30 @@ namespace Cubeage
             if (property.Type == TransformType.Position)
             {
                 var scaleProperty = new Property(TransformType.Scale, property.Dimension);
-                foreach (var controller in Siblings.SelectMany(x => x._boneControllers)
+                foreach (var controller in VirtualParents.SelectMany(x => x._boneControllers)
                     .Where(x => x.TransformSiblings)
                     .Where(x => x.Properties[scaleProperty].IsOverallEnabled))
                 {
-                    var origin = controller.TransformHandler._data.Get(property);
-                    var offset = _data.Get(property) - origin;
+                    // should use the relative position to the same object
+                    var origin = controller.TransformHandler._data.Get(property, true);
+                    var angle = _data.eulerAngles - controller.TransformHandler._data.eulerAngles;
+                    var target = _data.position;
+                    switch (property.Dimension)
+                    {
+                        case Dimension.X:
+                            target = RotateY(target, angle.y);
+                            // target = RotateZ(target, angle.z);
+                            break;
+                        case Dimension.Y:
+                            target = RotateX(target, angle.x);
+                            // target = RotateZ(target, angle.z);
+                            break;
+                        case Dimension.Z:
+                            target = RotateX(target, angle.x);
+                            // target = RotateY(target, angle.y);
+                            break;
+                    }
+                    var offset = target.Get(property.Dimension) - origin;
                     var scaledOffset = offset * (controller.Properties[scaleProperty].Change - 1);
                     value = GetValue(property.Type, value, scaledOffset);
                 }
@@ -200,15 +280,52 @@ namespace Cubeage
             if ((hint == UpdateHints.UpdatedChange || hint == UpdateHints.ToggledEnable) && _boneControllers.Any(x => x.TransformSiblings) || 
                 hint == UpdateHints.UpdatedTransformSiblings)
             {
-                foreach (var sibling in Siblings)
+                foreach (var child in VirtualChildren)
                 {
-                    sibling.Update(property);
+                    child.Update(property);
                     if (property.Type == TransformType.Scale)
-                        sibling.Update(new Property(TransformType.Position, property.Dimension));
+                    {
+                        child.Update(new Property(TransformType.Position, Dimension.X));
+                        child.Update(new Property(TransformType.Position, Dimension.Y));
+                        child.Update(new Property(TransformType.Position, Dimension.Z));
+                    }
                 }
             }
         }
+        public static Vector3 RotateX(Vector3 vector, float angle)
+        {
+            float sin = Mathf.Sin(angle);
+            float cos = Mathf.Cos(angle);
 
+
+            var result = vector;
+            result.y = (cos * vector.y) - (sin * vector.z);
+            result.z = (cos * vector.z) + (sin * vector.y);
+
+            return result;
+        }
+
+        public static Vector3 RotateY(Vector3 vector, float angle)
+        {
+            float sin = Mathf.Sin(angle);
+            float cos = Mathf.Cos(angle);
+
+            var result = vector;
+            result.x = (cos * vector.x) + (sin * vector.z);
+            result.z = (cos * vector.z) - (sin * vector.x);
+            return result;
+        }
+
+        public static Vector3 RotateZ(Vector3 vector, float angle)
+        {
+            float sin = Mathf.Sin(angle);
+            float cos = Mathf.Cos(angle);
+
+            var result = vector;
+            result.x = (cos * vector.x) - (sin * vector.y);
+            result.y = (cos * vector.y) + (sin * vector.x);
+            return result;
+        }
 
         float GetCounterChange(TransformType type, float change)
         {

@@ -91,15 +91,57 @@ namespace Cubeage
                         {
                             using (Layout.Horizontal())
                             {
+                                Layout.Foldout(handler.IsExpanded)
+                                    .OnChanged(x =>
+                                    {
+                                        handler.IsExpanded = x;
+                                    });
                                 Layout.ObjectLabel(handler.Transform);
                                 if (handler.TryGetTargetTransform(out var target))
                                 {
                                     Layout.ObjectLabel(target);
-                                } else
+                                }
+                                else
                                 {
                                     using (Layout.Color(Color.red))
                                     {
                                         Layout.ObjectLabel<GameObject>(null);
+                                    }
+                                }
+                            }
+
+                            Layout.Label($"{handler.Data.position.x} {handler.Data.localPosition.x}");
+                            if (handler.IsExpanded)
+                            {
+                                using (Layout.Indent())
+                                {
+                                    using (Layout.Horizontal())
+                                    {
+                                        Layout.Label($"Virtual Children ({handler.VirtualChildren.Count})");
+                                    }
+                                    foreach (var childHandler in handler.VirtualChildren)
+                                    {
+                                        using (Layout.Horizontal())
+                                        {
+                                            Layout.Object(childHandler.Transform);
+                                        }
+                                    }
+                                    using (Layout.Horizontal())
+                                    {
+                                        Layout.Object<Transform>(null).OnChanged(x =>
+                                        {
+                                            if (x != null)
+                                            {
+                                                try
+                                                {
+                                                    handler.AddVirtualChild(x);
+                                                }
+                                                catch (Exception e)
+                                                {
+                                                    Alert(e.Message);
+                                                }
+                                            }
+                                        });
                                     }
                                 }
                             }
