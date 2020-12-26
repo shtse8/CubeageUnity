@@ -117,7 +117,6 @@ namespace Cubeage
                                 }
                             }
 
-                            Layout.Label($"{handler.Data.position.x} {handler.Data.localPosition.x}");
                             if (handler.IsExpanded)
                             {
                                 using (Layout.Indent())
@@ -313,13 +312,13 @@ namespace Cubeage
                                                     bone.TransformChildren = x;
                                                 });
                                         Layout.Label("Children", GUILayout.MinWidth(50), GUILayout.MaxWidth(120));
-                                        Layout.Toggle(bone.TransformSiblings)
+                                        Layout.Toggle(bone.TransformVirtualChildren)
                                                 .OnChanged(x =>
                                                 {
                                                     RecordUndo("Toggle Transform Siblings");
-                                                    bone.TransformSiblings = x;
+                                                    bone.TransformVirtualChildren = x;
                                                 });
-                                        Layout.Label("Siblings", GUILayout.MinWidth(50), GUILayout.MaxWidth(120));
+                                        Layout.Label("Virtual Children", GUILayout.MinWidth(50), GUILayout.MaxWidth(120));
                                     }
 
                                     foreach (var type in EnumHelper.GetValues<TransformType>())

@@ -42,7 +42,7 @@ namespace Cubeage
 
         [SerializeField]
         protected bool _transformSiblings = false;
-        public bool TransformSiblings
+        public bool TransformVirtualChildren
         {
             get => _transformSiblings;
             set
@@ -52,7 +52,7 @@ namespace Cubeage
 
                 _transformSiblings = value;
 
-                _transformHandler.Update(this, UpdateHints.UpdatedTransformSiblings);
+                _transformHandler.Update(this, UpdateHints.UpdatedTransformVirtualChildren);
             }
         }
 

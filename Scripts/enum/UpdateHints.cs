@@ -4,7 +4,7 @@
     {
         UpdatedChange,
         UpdatedTransformChildren,
-        UpdatedTransformSiblings,
+        UpdatedTransformVirtualChildren,
         ToggledEnable
     }
 

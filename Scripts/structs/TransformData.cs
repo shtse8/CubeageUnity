@@ -13,6 +13,8 @@ namespace Cubeage
         public Vector3 position;
         public Vector3 scale;
         public Vector3 eulerAngles;
+
+        public Quaternion rotation;
     }
 
 }

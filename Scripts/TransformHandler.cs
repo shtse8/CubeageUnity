@@ -110,25 +110,38 @@ namespace Cubeage
                 localEulerAngles = transform.localEulerAngles,
                 localScale = transform.localScale,
                 position = GetRelativePosition(_manager.Root.transform, transform.position),
-                eulerAngles = transform.eulerAngles - _manager.Root.transform.eulerAngles,
+                rotation = transform.rotation,
                 // scale = transform.lossyScale / _manager.Root.transform.lossyScale
             };
 
+        }
+
+        public static Vector3 GetRelativePosition(Vector3 originPosition, Quaternion originRotation, Vector3 position)
+        {
+            Vector3 distance = position - originPosition;
+            Vector3 relativePosition = Vector3.zero;
+            relativePosition.x = Vector3.Dot(distance, (originRotation * Vector3.right).normalized);
+            relativePosition.y = Vector3.Dot(distance, (originRotation * Vector3.up).normalized);
+            relativePosition.z = Vector3.Dot(distance, (originRotation * Vector3.forward).normalized);
+            return relativePosition;
         }
 
         public static Vector3 GetRelativePosition(Transform origin, Vector3 position)
         {
             Vector3 distance = position - origin.position;
             Vector3 relativePosition = Vector3.zero;
-            relativePosition.x = Vector3.Dot(distance, origin.right.normalized);
-            relativePosition.y = Vector3.Dot(distance, origin.up.normalized);
-            relativePosition.z = Vector3.Dot(distance, origin.forward.normalized);
-            if (distance != relativePosition)
-            {
-                Debug.Log(distance.x + ", " + distance.y + ", " + distance.z);
-                Debug.Log(origin.right.normalized.x + ", " + origin.right.normalized.y + ", " + origin.right.normalized.z);
-                Debug.Log(relativePosition.x + ", " + relativePosition.y + ", " + relativePosition.z);
-            }
+            relativePosition.x = Vector3.Dot(distance, (origin.rotation * Vector3.right).normalized);
+            relativePosition.y = Vector3.Dot(distance, (origin.rotation * Vector3.up).normalized);
+            relativePosition.z = Vector3.Dot(distance, (origin.rotation * Vector3.forward).normalized);
+            // relativePosition.x = Vector3.Dot(distance, origin.right.normalized);
+            // relativePosition.y = Vector3.Dot(distance, origin.up.normalized);
+            // relativePosition.z = Vector3.Dot(distance, origin.forward.normalized);
+            // if (distance != relativePosition)
+            // {
+            //     Debug.Log(distance.x + ", " + distance.y + ", " + distance.z);
+            //     Debug.Log(origin.right.normalized.x + ", " + origin.right.normalized.y + ", " + origin.right.normalized.z);
+            //     Debug.Log(relativePosition.x + ", " + relativePosition.y + ", " + relativePosition.z);
+            // }
             return relativePosition;
         }
 
@@ -215,7 +228,7 @@ namespace Cubeage
 
             // Siblings
             foreach (var entry in VirtualParents.SelectMany(x => x._boneControllers)
-                .Where(x => x.TransformSiblings)
+                .Where(x => x.TransformVirtualChildren)
                 .Select(x => x.Properties[property])
                 .Where(x => x.IsOverallEnabled))
             {
@@ -226,29 +239,10 @@ namespace Cubeage
             {
                 var scaleProperty = new Property(TransformType.Scale, property.Dimension);
                 foreach (var controller in VirtualParents.SelectMany(x => x._boneControllers)
-                    .Where(x => x.TransformSiblings)
+                    .Where(x => x.TransformVirtualChildren)
                     .Where(x => x.Properties[scaleProperty].IsOverallEnabled))
                 {
-                    // should use the relative position to the same object
-                    var origin = controller.TransformHandler._data.Get(property, true);
-                    var angle = _data.eulerAngles - controller.TransformHandler._data.eulerAngles;
-                    var target = _data.position;
-                    switch (property.Dimension)
-                    {
-                        case Dimension.X:
-                            target = RotateY(target, angle.y);
-                            // target = RotateZ(target, angle.z);
-                            break;
-                        case Dimension.Y:
-                            target = RotateX(target, angle.x);
-                            // target = RotateZ(target, angle.z);
-                            break;
-                        case Dimension.Z:
-                            target = RotateX(target, angle.x);
-                            // target = RotateY(target, angle.y);
-                            break;
-                    }
-                    var offset = target.Get(property.Dimension) - origin;
+                    var offset = GetRelativePosition(controller.TransformHandler._data.position, controller.TransformHandler._data.rotation, _data.position).Get(property.Dimension);
                     var scaledOffset = offset * (controller.Properties[scaleProperty].Change - 1);
                     value = GetValue(property.Type, value, scaledOffset);
                 }
@@ -277,8 +271,8 @@ namespace Cubeage
                 }
             }
 
-            if ((hint == UpdateHints.UpdatedChange || hint == UpdateHints.ToggledEnable) && _boneControllers.Any(x => x.TransformSiblings) || 
-                hint == UpdateHints.UpdatedTransformSiblings)
+            if ((hint == UpdateHints.UpdatedChange || hint == UpdateHints.ToggledEnable) && _boneControllers.Any(x => x.TransformVirtualChildren) || 
+                hint == UpdateHints.UpdatedTransformVirtualChildren)
             {
                 foreach (var child in VirtualChildren)
                 {
