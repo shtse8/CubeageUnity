@@ -72,6 +72,37 @@ namespace Cubeage
             }
         }
 
+        public static void Set(this Transform transform, TransformType type, Vector3 vector)
+        {
+            switch (type)
+            {
+                case TransformType.Position:
+                    transform.localPosition = vector;
+                    break;
+                case TransformType.Rotation:
+                    transform.localEulerAngles = vector;
+                    break;
+                case TransformType.Scale:
+                    transform.localScale = vector;
+                    break;
+            }
+        }
+
+        public static Vector3 Get(this Transform transform, TransformType type)
+        {
+            switch (type)
+            {
+                case TransformType.Position:
+                    return transform.localPosition;
+                case TransformType.Rotation:
+                    return transform.localEulerAngles;
+                case TransformType.Scale:
+                    return transform.localScale;
+                default:
+                    throw new Exception("Unsupport type.");
+            }
+        }
+
         public static float Get(this Vector3 vector, Dimension direction)
         {
             switch (direction)

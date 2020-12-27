@@ -41,22 +41,6 @@ namespace Cubeage
         }
 
         [SerializeField]
-        protected bool _transformSiblings = false;
-        public bool TransformVirtualChildren
-        {
-            get => _transformSiblings;
-            set
-            {
-                if (Equals(_transformSiblings, value))
-                    return;
-
-                _transformSiblings = value;
-
-                _transformHandler.Update(this, UpdateHints.UpdatedTransformVirtualChildren);
-            }
-        }
-
-        [SerializeField]
         public bool _isExpanded = false;
         public bool IsExpanded
         {

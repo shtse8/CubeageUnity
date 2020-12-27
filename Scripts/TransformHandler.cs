@@ -70,12 +70,29 @@ namespace Cubeage
         protected List<TransformController> _boneControllers = new List<TransformController>();
         public List<TransformController> BoneControllers => _boneControllers.ToList();
 
-        public IEnumerable<TransformHandler> VirtualParents => _manager.Handlers.Where(x => x.VirtualChildren.Contains(this));
 
+        #region Virtual Hierarchy
         [SerializeField]
         [SerializeReference]
-        protected List<TransformHandler> _virtualChildren = new List<TransformHandler>();
-        public List<TransformHandler> VirtualChildren => _virtualChildren.ToList();
+        protected TransformHandler _virtualParent;
+        public TransformHandler VirtualParent
+        {
+            get => _virtualParent;
+            set
+            {
+                if (Equals(_virtualParent, value))
+                    return;
+
+                if (Equals(this, value))
+                    throw new Exception("Cannot set itself as parent.");
+
+                _virtualParent = value;
+                Update();
+            }
+        }
+
+        public IEnumerable<TransformHandler> VirtualChildren => _manager.Handlers.Where(x => Equals(x._virtualParent, this));
+        #endregion
 
         [SerializeField]
         [SerializeReference]
@@ -111,9 +128,7 @@ namespace Cubeage
                 localScale = transform.localScale,
                 position = GetRelativePosition(_manager.Root.transform, transform.position),
                 rotation = transform.rotation,
-                // scale = transform.lossyScale / _manager.Root.transform.lossyScale
             };
-
         }
 
         public static Vector3 GetRelativePosition(Vector3 originPosition, Quaternion originRotation, Vector3 position)
@@ -166,20 +181,20 @@ namespace Cubeage
             Update(controller, UpdateHints.ToggledEnable);
         }
 
+        public void SetVirtualParent(Transform transform)
+        {
+            if (!_manager.TryGet(transform, out var handler))
+                throw new Exception("Not a valid parent.");
+            VirtualParent = handler;
+        }
+
         public void AddVirtualChild(Transform transform)
         {
             if (!_manager.TryGet(transform, out var handler))
                 throw new Exception("Not a valid child.");
-            if (_virtualChildren.Contains(handler))
-                throw new Exception("Duplicated child");
-            _virtualChildren.Add(handler);
-            handler.Update();
-        }
-
-        public void RemoveVirtualChild(TransformHandler handler)
-        {
-            _virtualChildren.Remove(handler);
-            handler.Update();
+            Debug.Log(handler.VirtualParent.Transform.name);
+            handler.VirtualParent = this;
+            Debug.Log(handler.VirtualParent.Transform.name);
         }
 
         public bool IsValid()
@@ -190,9 +205,9 @@ namespace Cubeage
 
         public void Update(UpdateHints? hint = null)
         {
-            foreach (var property in Property.GetAll())
+            foreach (var type in EnumHelper.GetValues<TransformType>())
             {
-                Update(property, hint);
+                Update(type, hint);
             }
         }
 
@@ -217,6 +232,39 @@ namespace Cubeage
 
         public void Update(Property property, UpdateHints? hint = null)
         {
+            Update(property.Type, hint);
+        }
+
+        public void Update(TransformType type, UpdateHints? hint = null)
+        {
+            var value = Vector3.zero;
+            foreach (var property in EnumHelper.GetValues<Dimension>().Select(x => new Property(type, x)))
+            {
+                value = value.Set(property.Dimension, GetValue(property));
+            }
+
+            if (!Equals(_transform.Get(type), value))
+                _transform.Set(type, value);
+
+            if ((hint == UpdateHints.UpdatedChange || hint == UpdateHints.ToggledEnable) && _boneControllers.Any(x => x.TransformChildren) ||
+                hint == UpdateHints.UpdatedTransformChildren)
+            {
+                foreach (var child in Children)
+                {
+                    child.Update(type);
+                }
+
+                foreach (var child in VirtualChildren)
+                {
+                    child.Update(type);
+                    if (type == TransformType.Scale)
+                        child.Update(TransformType.Position);
+                }
+            }
+        }
+
+        float GetValue(Property property)
+        {
             var value = _data.Get(property);
             foreach (var entry in _boneControllers
                     .Select(x => x.Properties[property])
@@ -224,101 +272,45 @@ namespace Cubeage
             {
                 value = GetValue(property.Type, value, entry.Change);
             }
+
+            if (VirtualParent != null && VirtualParent != Parent)
+            {
+                foreach (var entry in VirtualParent._boneControllers
+                    .Where(x => x.TransformChildren)
+                    .Select(x => x.Properties[property])
+                    .Where(x => x.IsOverallEnabled))
+                {
+                    value = GetValue(property.Type, value, entry.Change);
+                }
             
-
-            // Siblings
-            foreach (var entry in VirtualParents.SelectMany(x => x._boneControllers)
-                .Where(x => x.TransformVirtualChildren)
-                .Select(x => x.Properties[property])
-                .Where(x => x.IsOverallEnabled))
-            {
-                value = GetValue(property.Type, value, entry.Change);
-            }
-
-            if (property.Type == TransformType.Position)
-            {
-                var scaleProperty = new Property(TransformType.Scale, property.Dimension);
-                foreach (var controller in VirtualParents.SelectMany(x => x._boneControllers)
-                    .Where(x => x.TransformVirtualChildren)
-                    .Where(x => x.Properties[scaleProperty].IsOverallEnabled))
+                if (property.Type == TransformType.Position)
                 {
-                    var offset = GetRelativePosition(controller.TransformHandler._data.position, controller.TransformHandler._data.rotation, _data.position).Get(property.Dimension);
-                    var scaledOffset = offset * (controller.Properties[scaleProperty].Change - 1);
-                    value = GetValue(property.Type, value, scaledOffset);
-                }
-            }
-
-            // Parent
-            foreach (var entry in Parent?._boneControllers
-                .Where(x => !x.TransformChildren)
-                .Select(x => x.Properties[property])
-                .Where(x => x.IsOverallEnabled))
-            {
-                value = GetValue(property.Type, value, GetCounterChange(property.Type, entry.Change));
-            }
-
-            if (!Equals(_transform.Get(property), value))
-            {
-                _transform.Set(property, value);
-            }
-
-            if ((hint == UpdateHints.UpdatedChange || hint == UpdateHints.ToggledEnable) && _boneControllers.Any(x => x.TransformChildren) ||
-                hint == UpdateHints.UpdatedTransformChildren)
-            {
-                foreach (var child in Children)
-                {
-                    child.Update(property);
-                }
-            }
-
-            if ((hint == UpdateHints.UpdatedChange || hint == UpdateHints.ToggledEnable) && _boneControllers.Any(x => x.TransformVirtualChildren) || 
-                hint == UpdateHints.UpdatedTransformVirtualChildren)
-            {
-                foreach (var child in VirtualChildren)
-                {
-                    child.Update(property);
-                    if (property.Type == TransformType.Scale)
+                    var scaleProperty = new Property(TransformType.Scale, property.Dimension);
+                    foreach (var controller in VirtualParent._boneControllers
+                        .Where(x => x.TransformChildren)
+                        .Where(x => x.Properties[scaleProperty].IsOverallEnabled))
                     {
-                        child.Update(new Property(TransformType.Position, Dimension.X));
-                        child.Update(new Property(TransformType.Position, Dimension.Y));
-                        child.Update(new Property(TransformType.Position, Dimension.Z));
+                        var offset = GetRelativePosition(controller.TransformHandler._data.position, controller.TransformHandler._data.rotation, _data.position).Get(property.Dimension);
+                        var scaledOffset = offset * (controller.Properties[scaleProperty].Change - 1);
+                        value = GetValue(property.Type, value, scaledOffset);
                     }
                 }
             }
-        }
-        public static Vector3 RotateX(Vector3 vector, float angle)
-        {
-            float sin = Mathf.Sin(angle);
-            float cos = Mathf.Cos(angle);
 
 
-            var result = vector;
-            result.y = (cos * vector.y) - (sin * vector.z);
-            result.z = (cos * vector.z) + (sin * vector.y);
+            // Counter Changes
+            if (Parent != null)
+            {
+                foreach (var entry in Parent._boneControllers
+                    .Where(x => !x.TransformChildren)
+                    .Select(x => x.Properties[property])
+                    .Where(x => x.IsOverallEnabled))
+                {
+                    value = GetValue(property.Type, value, GetCounterChange(property.Type, entry.Change));
+                }
+            }
 
-            return result;
-        }
-
-        public static Vector3 RotateY(Vector3 vector, float angle)
-        {
-            float sin = Mathf.Sin(angle);
-            float cos = Mathf.Cos(angle);
-
-            var result = vector;
-            result.x = (cos * vector.x) + (sin * vector.z);
-            result.z = (cos * vector.z) - (sin * vector.x);
-            return result;
-        }
-
-        public static Vector3 RotateZ(Vector3 vector, float angle)
-        {
-            float sin = Mathf.Sin(angle);
-            float cos = Mathf.Cos(angle);
-
-            var result = vector;
-            result.x = (cos * vector.x) - (sin * vector.y);
-            result.y = (cos * vector.y) + (sin * vector.x);
-            return result;
+            return value;
         }
 
         float GetCounterChange(TransformType type, float change)

@@ -43,6 +43,61 @@ namespace Cubeage
             return Confirm("Are you sure want to remove?");
         }
 
+        void DrawHierarchy(TransformHandler handler = null)
+        {
+            var handlers = handler?.VirtualChildren ?? _avatarController.Manager.Handlers.Where(x => x.VirtualParent == null);
+            using (Layout.Indent())
+            {
+                foreach (var child in handlers)
+                {
+                    using (Layout.Horizontal())
+                    {
+                        Layout.Foldout(child.IsExpanded)
+                            .OnChanged(x =>
+                            {
+                                child.IsExpanded = x;
+                            });
+                        Layout.ObjectLabel(child.Transform);
+                        // if (handler.TryGetTargetTransform(out var target))
+                        // {
+                        //     Layout.ObjectLabel(target);
+                        // }
+                        // else
+                        // {
+                        //     using (Layout.Color(Color.red))
+                        //     {
+                        //         Layout.ObjectLabel<GameObject>(null);
+                        //     }
+                        // }
+                    }
+
+                    if (child.IsExpanded)
+                    {
+                        DrawHierarchy(child);
+                        using (Layout.Horizontal())
+                        {
+                            Layout.Space(32);
+                            Layout.Object<Transform>(null).OnChanged(x =>
+                            {
+                                if (x != null)
+                                {
+                                    try
+                                    {
+                                        RecordUndo("Add Virtual Child");
+                                        child.AddVirtualChild(x);
+                                    }
+                                    catch (Exception e)
+                                    {
+                                        Alert(e.Message);
+                                    }
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
         public override void OnInspectorGUI()
         {
             using (Layout.Horizontal())
@@ -92,68 +147,7 @@ namespace Cubeage
 
                 if (_showAllValidBones)
                 {
-                    using (Layout.Indent())
-                    {
-                        foreach (var handler in _avatarController.Manager.Handlers)
-                        {
-                            using (Layout.Horizontal())
-                            {
-                                Layout.Foldout(handler.IsExpanded)
-                                    .OnChanged(x =>
-                                    {
-                                        handler.IsExpanded = x;
-                                    });
-                                Layout.ObjectLabel(handler.Transform);
-                                if (handler.TryGetTargetTransform(out var target))
-                                {
-                                    Layout.ObjectLabel(target);
-                                }
-                                else
-                                {
-                                    using (Layout.Color(Color.red))
-                                    {
-                                        Layout.ObjectLabel<GameObject>(null);
-                                    }
-                                }
-                            }
-
-                            if (handler.IsExpanded)
-                            {
-                                using (Layout.Indent())
-                                {
-                                    using (Layout.Horizontal())
-                                    {
-                                        Layout.Label($"Virtual Children ({handler.VirtualChildren.Count})");
-                                    }
-                                    foreach (var childHandler in handler.VirtualChildren)
-                                    {
-                                        using (Layout.Horizontal())
-                                        {
-                                            Layout.Object(childHandler.Transform);
-                                        }
-                                    }
-                                    using (Layout.Horizontal())
-                                    {
-                                        Layout.Object<Transform>(null).OnChanged(x =>
-                                        {
-                                            if (x != null)
-                                            {
-                                                try
-                                                {
-                                                    RecordUndo("Add Virtual Child");
-                                                    handler.AddVirtualChild(x);
-                                                }
-                                                catch (Exception e)
-                                                {
-                                                    Alert(e.Message);
-                                                }
-                                            }
-                                        });
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    DrawHierarchy();
                 }
 
             }
@@ -312,13 +306,6 @@ namespace Cubeage
                                                     bone.TransformChildren = x;
                                                 });
                                         Layout.Label("Children", GUILayout.MinWidth(50), GUILayout.MaxWidth(120));
-                                        Layout.Toggle(bone.TransformVirtualChildren)
-                                                .OnChanged(x =>
-                                                {
-                                                    RecordUndo("Toggle Transform Siblings");
-                                                    bone.TransformVirtualChildren = x;
-                                                });
-                                        Layout.Label("Virtual Children", GUILayout.MinWidth(50), GUILayout.MaxWidth(120));
                                     }
 
                                     foreach (var type in EnumHelper.GetValues<TransformType>())

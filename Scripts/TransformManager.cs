@@ -25,6 +25,8 @@ namespace Cubeage
                 _root = value;
                 _handlers.Clear();
                 _handlers.AddRange(_root.GetComponentsInChildren<Transform>().Where(x => IsValid(x)).Select(x => new TransformHandler(this, x)));
+                foreach(var handler in _handlers)
+                    handler.VirtualParent = handler.Parent;
             }
         }
 
