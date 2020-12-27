@@ -12,8 +12,6 @@ namespace Cubeage
     [CustomEditor(typeof(AvatarController))]
     public class ControllerEditor : Editor
     {
-        bool _showAllValidBones = false;
-        string message = "";
         AvatarController _avatarController;
 
         void OnEnable()
@@ -46,52 +44,55 @@ namespace Cubeage
         void DrawHierarchy(TransformHandler handler = null)
         {
             var handlers = handler?.VirtualChildren ?? _avatarController.Manager.Handlers.Where(x => x.VirtualParent == null);
-            using (Layout.Indent())
+            if (handlers.Count() > 0)
             {
-                foreach (var child in handlers)
+                using (Layout.Indent())
                 {
-                    using (Layout.Horizontal())
+                    foreach (var child in handlers)
                     {
-                        Layout.Foldout(child.IsExpanded)
-                            .OnChanged(x =>
-                            {
-                                child.IsExpanded = x;
-                            });
-                        Layout.ObjectLabel(child.Transform);
-                        // if (handler.TryGetTargetTransform(out var target))
-                        // {
-                        //     Layout.ObjectLabel(target);
-                        // }
-                        // else
-                        // {
-                        //     using (Layout.Color(Color.red))
-                        //     {
-                        //         Layout.ObjectLabel<GameObject>(null);
-                        //     }
-                        // }
-                    }
-
-                    if (child.IsExpanded)
-                    {
-                        DrawHierarchy(child);
                         using (Layout.Horizontal())
                         {
-                            Layout.Space(32);
-                            Layout.Object<Transform>(null).OnChanged(x =>
-                            {
-                                if (x != null)
+                            Layout.Foldout(child.IsExpanded)
+                                .OnChanged(x =>
                                 {
-                                    try
+                                    child.IsExpanded = x;
+                                });
+                            Layout.ObjectLabel(child.Transform);
+                            // if (handler.TryGetTargetTransform(out var target))
+                            // {
+                            //     Layout.ObjectLabel(target);
+                            // }
+                            // else
+                            // {
+                            //     using (Layout.Color(Color.red))
+                            //     {
+                            //         Layout.ObjectLabel<GameObject>(null);
+                            //     }
+                            // }
+                        }
+
+                        if (child.IsExpanded)
+                        {
+                            DrawHierarchy(child);
+                            using (Layout.Horizontal())
+                            {
+                                Layout.Space(32);
+                                Layout.Object<Transform>(null).OnChanged(x =>
+                                {
+                                    if (x != null)
                                     {
-                                        RecordUndo("Add Virtual Child");
-                                        child.AddVirtualChild(x);
+                                        try
+                                        {
+                                            RecordUndo("Add Virtual Child");
+                                            child.AddVirtualChild(x);
+                                        }
+                                        catch (Exception e)
+                                        {
+                                            Alert(e.Message);
+                                        }
                                     }
-                                    catch (Exception e)
-                                    {
-                                        Alert(e.Message);
-                                    }
-                                }
-                            });
+                                });
+                            }
                         }
                     }
                 }
@@ -141,15 +142,12 @@ namespace Cubeage
             {
                 using (Layout.Horizontal())
                 {
-                    Layout.Foldout(_showAllValidBones).OnChanged(x => _showAllValidBones = x);
+                    Layout.Foldout(_avatarController.Manager.IsExpanded).OnChanged(x => _avatarController.Manager.IsExpanded = x);
                     Layout.Label($"Bones: {_avatarController.Manager.Handlers.Count}");
                 }
 
-                if (_showAllValidBones)
-                {
+                if (_avatarController.Manager.IsExpanded)
                     DrawHierarchy();
-                }
-
             }
 
             using (Layout.Toolbar())

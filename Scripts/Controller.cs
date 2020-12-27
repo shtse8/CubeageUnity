@@ -139,7 +139,7 @@ namespace Cubeage
         {
             controller.IsEnabled = false;
 
-            controller.TransformHandler.RemoveTransformController(controller);
+            controller.Handler.RemoveTransformController(controller);
             _boneControllers.Remove(controller);
         }
 

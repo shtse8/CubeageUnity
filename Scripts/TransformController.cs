@@ -17,7 +17,7 @@ namespace Cubeage
         [SerializeReference] 
         [SerializeField]
         protected TransformHandler _transformHandler;
-        public TransformHandler TransformHandler => _transformHandler;
+        public TransformHandler Handler => _transformHandler;
 
         [SerializeField]
         protected SerializableDictionary<Property, Entry> _properties = new SerializableDictionary<Property, Entry>();

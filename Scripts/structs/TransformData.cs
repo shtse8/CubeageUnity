@@ -17,4 +17,21 @@ namespace Cubeage
         public Quaternion rotation;
     }
 
+    public struct TransformUpdate
+    {
+        public TransformHandler handler;
+        public TransformType type;
+
+        public TransformUpdate(TransformHandler handler, Property property)
+        {
+            this.handler = handler;
+            this.type = property.Type;
+        }
+        public TransformUpdate(TransformHandler handler, TransformType type)
+        {
+            this.handler = handler;
+            this.type = type;
+        }
+    }
+
 }

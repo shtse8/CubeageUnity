@@ -31,7 +31,7 @@ namespace Cubeage
                     return;
 
                 _isEnabled = value;
-                _bone.TransformHandler.Update(_property, UpdateHints.ToggledEnable);
+                _bone.Handler.Update(_property, UpdateHints.ToggledEnable);
             }
         }
 
@@ -48,7 +48,7 @@ namespace Cubeage
                     return;
 
                 _min = value;
-                _bone.TransformHandler.Update(_property, UpdateHints.UpdatedChange);
+                _bone.Handler.Update(_property, UpdateHints.UpdatedChange);
             }
         }
 
@@ -64,7 +64,7 @@ namespace Cubeage
                     return;
 
                 _max = value;
-                _bone.TransformHandler.Update(_property, UpdateHints.UpdatedChange);
+                _bone.Handler.Update(_property, UpdateHints.UpdatedChange);
             }
         }
 

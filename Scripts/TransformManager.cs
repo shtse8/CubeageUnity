@@ -14,6 +14,20 @@ namespace Cubeage
         public string Suffix => _suffix;
 
         [SerializeField]
+        private bool _isExpanded = false;
+        public bool IsExpanded
+        {
+            get => _isExpanded;
+            set
+            {
+                if (Equals(_isExpanded, value))
+                    return;
+
+                _isExpanded = value;
+            }
+        }
+
+        [SerializeField]
         protected Transform _root;
         public Transform Root {
             get => _root;

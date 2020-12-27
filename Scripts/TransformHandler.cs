@@ -13,12 +13,12 @@ namespace Cubeage
         {
             get
             {
-                var parent = _transform.parent;
-                while (parent)
+                var current = _transform.parent;
+                while (current)
                 {
-                    if (_manager.TryGet(parent, out var handler))
+                    if (_manager.TryGet(current, out var handler))
                         return handler;
-                    parent = parent.parent;
+                    current = current.parent;
                 }
                 return null;
             }
@@ -70,6 +70,7 @@ namespace Cubeage
         protected List<TransformController> _boneControllers = new List<TransformController>();
         public List<TransformController> BoneControllers => _boneControllers.ToList();
 
+        public string Name => _transform?.name;
 
         #region Virtual Hierarchy
         [SerializeField]
@@ -205,10 +206,7 @@ namespace Cubeage
 
         public void Update(UpdateHints? hint = null)
         {
-            foreach (var type in EnumHelper.GetValues<TransformType>())
-            {
-                Update(type, hint);
-            }
+            Update(Property.GetAll().SelectMany(x => GenerateUpdateRequest(x, hint)));
         }
 
         public void Update(TransformController boneController, UpdateHints? hint = null)
@@ -223,19 +221,51 @@ namespace Cubeage
                                                   .SelectMany(x => x.Properties.Values)
                                                   .Where(x => hint == UpdateHints.ToggledEnable ? x.IsEnabled : x.IsOverallEnabled)
                                                   .Select(x => x.Property);
-            foreach (var property in Property.GetAll().Intersect(targetProperties))
-            {
-                Update(property, hint);
-            }
+            Update(Property.GetAll().Intersect(targetProperties).SelectMany(x => GenerateUpdateRequest(x, hint)));
         }
 
 
         public void Update(Property property, UpdateHints? hint = null)
         {
-            Update(property.Type, hint);
+            Update(GenerateUpdateRequest(property, hint));
         }
 
-        public void Update(TransformType type, UpdateHints? hint = null)
+        public IEnumerable<TransformUpdate> GenerateUpdateRequest(Property property, UpdateHints? hint = null)
+        {
+            yield return new TransformUpdate(this, property);
+
+            if ((hint == UpdateHints.UpdatedChange || hint == UpdateHints.ToggledEnable) && _boneControllers.Any(x => !x.TransformChildren) ||
+                hint == UpdateHints.UpdatedTransformChildren)
+            {
+                foreach (var child in Children)
+                {
+                    yield return new TransformUpdate(child, property);
+                    if (property.Type == TransformType.Scale)
+                        yield return new TransformUpdate(child, TransformType.Position);
+                }
+            }
+
+            if ((hint == UpdateHints.UpdatedChange || hint == UpdateHints.ToggledEnable) && _boneControllers.Any(x => x.TransformChildren) ||
+                hint == UpdateHints.UpdatedTransformChildren)
+            {
+                foreach (var child in this.GatherMany(x => x.VirtualChildren))
+                {
+                    yield return new TransformUpdate(child, property);
+                    if (property.Type == TransformType.Scale)
+                        yield return new TransformUpdate(child, TransformType.Position);
+                }
+            }
+        }
+
+        static void Update(IEnumerable<TransformUpdate> requests)
+        {
+            foreach(var request in requests.Distinct())
+            {
+                request.handler.Update(request.type);
+            }
+        }
+
+        public void Update(TransformType type)
         {
             var value = Vector3.zero;
             foreach (var property in EnumHelper.GetValues<Dimension>().Select(x => new Property(type, x)))
@@ -245,53 +275,35 @@ namespace Cubeage
 
             if (!Equals(_transform.Get(type), value))
                 _transform.Set(type, value);
-
-            if ((hint == UpdateHints.UpdatedChange || hint == UpdateHints.ToggledEnable) && _boneControllers.Any(x => x.TransformChildren) ||
-                hint == UpdateHints.UpdatedTransformChildren)
-            {
-                foreach (var child in Children)
-                {
-                    child.Update(type);
-                }
-
-                foreach (var child in VirtualChildren)
-                {
-                    child.Update(type);
-                    if (type == TransformType.Scale)
-                        child.Update(TransformType.Position);
-                }
-            }
         }
 
         float GetValue(Property property)
         {
             var value = _data.Get(property);
+
             foreach (var entry in _boneControllers
-                    .Select(x => x.Properties[property])
-                    .Where(x => x.IsOverallEnabled))
+                .Select(x => x.Properties[property])
+                .Where(x => x.IsOverallEnabled))
             {
                 value = GetValue(property.Type, value, entry.Change);
             }
 
-            if (VirtualParent != null && VirtualParent != Parent)
+            var virtualParents = this.Gather(x => x.VirtualParent);
+            var parents = this.Gather(x => x.Parent);
+            foreach (var controller in virtualParents.Except(parents).SelectMany(x => x._boneControllers).Where(x => x.TransformChildren))
             {
-                foreach (var entry in VirtualParent._boneControllers
-                    .Where(x => x.TransformChildren)
-                    .Select(x => x.Properties[property])
-                    .Where(x => x.IsOverallEnabled))
-                {
+                var entry = controller.Properties[property];
+                if (entry.IsOverallEnabled)
                     value = GetValue(property.Type, value, entry.Change);
-                }
-            
+
                 if (property.Type == TransformType.Position)
                 {
                     var scaleProperty = new Property(TransformType.Scale, property.Dimension);
-                    foreach (var controller in VirtualParent._boneControllers
-                        .Where(x => x.TransformChildren)
-                        .Where(x => x.Properties[scaleProperty].IsOverallEnabled))
+                    var scaleEntry = controller.Properties[scaleProperty];
+                    if (scaleEntry.IsOverallEnabled)
                     {
-                        var offset = GetRelativePosition(controller.TransformHandler._data.position, controller.TransformHandler._data.rotation, _data.position).Get(property.Dimension);
-                        var scaledOffset = offset * (controller.Properties[scaleProperty].Change - 1);
+                        var offset = GetRelativePosition(controller.Handler._data.position, controller.Handler._data.rotation, _data.position).Get(property.Dimension);
+                        var scaledOffset = offset * (scaleEntry.Change - 1);
                         value = GetValue(property.Type, value, scaledOffset);
                     }
                 }
@@ -301,12 +313,29 @@ namespace Cubeage
             // Counter Changes
             if (Parent != null)
             {
-                foreach (var entry in Parent._boneControllers
-                    .Where(x => !x.TransformChildren)
-                    .Select(x => x.Properties[property])
-                    .Where(x => x.IsOverallEnabled))
+                if (!virtualParents.Contains(Parent))
                 {
-                    value = GetValue(property.Type, value, GetCounterChange(property.Type, entry.Change));
+                    foreach (var controller in Parent._boneControllers)
+                    {
+                        var entry = controller.Properties[property];
+                        if (entry.IsOverallEnabled)
+                        {
+                            var change = GetCounterChange(property.Type, entry.Change);
+                            value = GetValue(property.Type, value, change);
+                        }
+                        if (property.Type == TransformType.Position)
+                        {
+                            var scaleProperty = new Property(TransformType.Scale, property.Dimension);
+                            var scaleEntry = controller.Properties[scaleProperty];
+                            if (scaleEntry.IsOverallEnabled)
+                            {
+                                var offset = GetRelativePosition(controller.Handler._data.position, controller.Handler._data.rotation, _data.position).Get(property.Dimension);
+                                var change = offset * (scaleEntry.Change - 1);
+                                change = GetCounterChange(property.Type, change);
+                                value = GetValue(property.Type, value, change);
+                            }
+                        }
+                    }
                 }
             }
 

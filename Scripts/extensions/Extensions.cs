@@ -68,6 +68,27 @@ namespace Cubeage
         {
             yield return item;
         }
+
+        public static IEnumerable<T> Gather<T>(this T target, Func<T, T> nextSelector)
+        {
+            var current = nextSelector(target);
+            while (current != null)
+            {
+                yield return current;
+                current = nextSelector(current);
+            }
+        }
+
+        public static IEnumerable<T> GatherMany<T>(this T target, Func<T, IEnumerable<T>> nextSelector)
+        {
+            var elements = nextSelector(target);
+            foreach (var current in elements)
+            {
+                yield return current;
+                foreach (var child in current.GatherMany(nextSelector))
+                    yield return child;
+            }
+        }
     }
 
     public static class EnumHelper
