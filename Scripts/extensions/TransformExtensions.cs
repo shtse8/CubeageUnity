@@ -41,6 +41,10 @@ namespace Cubeage
                     break;
             }
         }
+        public static Vector3 Invert(this Vector3 vector)
+        {
+            return new Vector3(1 / vector.x, 1 / vector.y, 1 / vector.z);
+        }
 
         public static Vector3 Get(this TransformData transform, TransformType type)
         {
