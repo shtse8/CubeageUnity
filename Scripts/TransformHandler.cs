@@ -310,15 +310,7 @@ namespace Cubeage
                     value = Change(type, value, scaleOffset);
 
                     // Handle Rotation
-                    var rotationChange = Vector3.zero;
-                    foreach (var dimension in EnumHelper.GetValues<Dimension>())
-                    {
-                        var rotationProperty = new Property(TransformType.Rotation, dimension);
-                        var rotationEntry = controller.Properties[rotationProperty];
-
-                        if (rotationEntry.IsOverallEnabled)
-                            rotationChange = rotationChange.Set(dimension, controller.Properties[rotationProperty].Change);
-                    }
+                    var rotationChange = GetChange(controller, TransformType.Rotation);
                     if (!Equals(rotationChange, Vector3.zero))
                     {
                         var rotationOffset = Rotate(relativePosition, rotationChange) - relativePosition;
@@ -348,19 +340,7 @@ namespace Cubeage
                             value = Change(type, value, scaleOffset);
 
                             // Handle Rotation
-                            var rotationChange = Vector3.zero;
-                            foreach (var dimension in EnumHelper.GetValues<Dimension>())
-                            {
-                                var rotationProperty = new Property(TransformType.Rotation, dimension);
-                                var rotationEntry = controller.Properties[rotationProperty];
-
-                                if (rotationEntry.IsOverallEnabled)
-                                {
-                                    var change2 = controller.Properties[rotationProperty].Change;
-                                    change2 = GetCounterChange(rotationProperty.Type, change2);
-                                    rotationChange = rotationChange.Set(dimension, change2);
-                                }
-                            }
+                            var rotationChange = -GetChange(controller, TransformType.Rotation);
                             if (!Equals(rotationChange, Vector3.zero))
                             {
                                 var rotationOffset = Rotate(relativePosition, rotationChange) - relativePosition;
