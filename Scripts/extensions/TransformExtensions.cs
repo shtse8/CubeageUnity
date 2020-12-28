@@ -42,6 +42,22 @@ namespace Cubeage
             }
         }
 
+        public static Vector3 Get(this TransformData transform, TransformType type)
+        {
+            switch (type)
+            {
+                case TransformType.Position:
+                    return transform.localPosition;
+                case TransformType.Rotation:
+                    return transform.localEulerAngles;
+                case TransformType.Scale:
+                    return transform.localScale;
+                default:
+                    throw new Exception("Unsupport type.");
+            }
+        }
+
+
         public static float Get(this Transform transform, Property property)
         {
             switch (property.Type)

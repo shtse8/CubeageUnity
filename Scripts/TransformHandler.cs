@@ -240,7 +240,7 @@ namespace Cubeage
                 foreach (var child in Children)
                 {
                     yield return new TransformUpdate(child, property);
-                    if (property.Type == TransformType.Scale)
+                    if (property.Type == TransformType.Scale || property.Type == TransformType.Rotation)
                         yield return new TransformUpdate(child, TransformType.Position);
                 }
             }
@@ -251,7 +251,7 @@ namespace Cubeage
                 foreach (var child in this.GatherMany(x => x.VirtualChildren))
                 {
                     yield return new TransformUpdate(child, property);
-                    if (property.Type == TransformType.Scale)
+                    if (property.Type == TransformType.Scale || property.Type == TransformType.Rotation)
                         yield return new TransformUpdate(child, TransformType.Position);
                 }
             }
@@ -268,19 +268,77 @@ namespace Cubeage
         public void Update(TransformType type)
         {
             var value = Vector3.zero;
-            foreach (var property in EnumHelper.GetValues<Dimension>().Select(x => new Property(type, x)))
+            if (type == TransformType.Rotation)
             {
-                value = value.Set(property.Dimension, GetValue(property));
+                value = GetValueRotation(type);
             }
-
+            else
+            {
+                foreach (var property in EnumHelper.GetValues<Dimension>().Select(x => new Property(type, x)))
+                {
+                    value = value.Set(property.Dimension, GetValue(property));
+                }
+            }
             if (!Equals(_transform.Get(type), value))
                 _transform.Set(type, value);
         }
 
+        Vector3 GetChange(TransformController controller, TransformType type)
+        {
+            var change = type == TransformType.Scale ? Vector3.one : Vector3.zero;
+            if (controller.Properties[new Property(type, Dimension.X)].IsOverallEnabled)
+                change.x = controller.Properties[new Property(type, Dimension.X)].Change;
+            if (controller.Properties[new Property(type, Dimension.Y)].IsOverallEnabled)
+                change.y = controller.Properties[new Property(type, Dimension.Y)].Change;
+            if (controller.Properties[new Property(type, Dimension.Z)].IsOverallEnabled)
+                change.z = controller.Properties[new Property(type, Dimension.Z)].Change;
+            return change;
+        }
+
+        Vector3 GetValueRotation(TransformType type)
+        {
+            var value = Quaternion.Euler(_data.localEulerAngles);
+            Debug.Log(Name + " 0 " + value.eulerAngles);
+            foreach (var controller in _boneControllers)
+            {
+                var change = GetChange(controller, type);
+                value *= Quaternion.Euler(change);
+                Debug.Log(Name + " 1 " + value.eulerAngles);
+            }
+
+            var virtualParents = this.Gather(x => x.VirtualParent);
+            var parents = this.Gather(x => x.Parent);
+            foreach (var controller in virtualParents.Except(parents).SelectMany(x => x._boneControllers).Where(x => x.TransformChildren))
+            {
+                var change = GetChange(controller, type);
+                value *= Quaternion.Euler(change);
+                Debug.Log(Name + " 2 " + value.eulerAngles);
+            }
+
+            // Counter Changes
+            if (Parent != null)
+            {
+                if (!virtualParents.Where(x => x.BoneControllers.Any(y => y.TransformChildren)).Contains(Parent))
+                {
+                    foreach (var controller in Parent._boneControllers)
+                    {
+                        // Still don't understand why, but it works.
+                        var change = GetChange(controller, type);
+                        var rotation = Quaternion.Euler(change);
+                        value = Quaternion.Inverse(Quaternion.Inverse(value) * rotation);
+                    }
+                }
+            }
+            return value.eulerAngles;
+        }
+        
         float GetValue(Property property)
         {
-            var value = _data.Get(property);
+            // var a = Quaternion.Euler(180, 0, 0);
+            // var b = Quaternion.Euler(0, 0, 0);
+            // Debug.Log((b * a).eulerAngles);
 
+            var value = _data.Get(property);
             foreach (var entry in _boneControllers
                 .Select(x => x.Properties[property])
                 .Where(x => x.IsOverallEnabled))
@@ -298,41 +356,107 @@ namespace Cubeage
 
                 if (property.Type == TransformType.Position)
                 {
+                    var relativePosition = GetRelativePosition(controller.Handler._data.position, controller.Handler._data.rotation, _data.position);
                     var scaleProperty = new Property(TransformType.Scale, property.Dimension);
                     var scaleEntry = controller.Properties[scaleProperty];
+
+                    // Handle Scale
                     if (scaleEntry.IsOverallEnabled)
                     {
-                        var offset = GetRelativePosition(controller.Handler._data.position, controller.Handler._data.rotation, _data.position).Get(property.Dimension);
-                        var scaledOffset = offset * (scaleEntry.Change - 1);
-                        value = GetValue(property.Type, value, scaledOffset);
+                        var offset = relativePosition.Get(property.Dimension);
+                        offset *= scaleEntry.Change - 1;
+                        value = GetValue(property.Type, value, offset);
+                    }
+
+                    // Handle Rotation
+                    var rotationChange = Vector3.zero;
+                    foreach(var dimension in EnumHelper.GetValues<Dimension>())
+                    {
+                        var rotationProperty = new Property(TransformType.Rotation, dimension);
+                        var rotationEntry = controller.Properties[rotationProperty];
+
+                        if (rotationEntry.IsOverallEnabled)
+                            rotationChange = rotationChange.Set(dimension, controller.Properties[rotationProperty].Change);
+                    }
+                    if (!Equals(rotationChange, Vector3.zero))
+                    {
+                        var offset = (Rotate(relativePosition, rotationChange) - relativePosition).Get(property.Dimension);
+                        if (scaleEntry.IsOverallEnabled)
+                            offset *= scaleEntry.Change;
+                        value = GetValue(property.Type, value, offset);
                     }
                 }
             }
 
-
             // Counter Changes
             if (Parent != null)
             {
-                if (!virtualParents.Contains(Parent))
+                if (!virtualParents.Where(x => x.BoneControllers.Any(y => y.TransformChildren)).Contains(Parent))
                 {
                     foreach (var controller in Parent._boneControllers)
                     {
                         var entry = controller.Properties[property];
                         if (entry.IsOverallEnabled)
                         {
-                            var change = GetCounterChange(property.Type, entry.Change);
-                            value = GetValue(property.Type, value, change);
+                            // if (property.Type == TransformType.Rotation)
+                            // {
+                            //     var rotationChange = Vector3.zero;
+                            //     foreach (var dimension in EnumHelper.GetValues<Dimension>())
+                            //     {
+                            //         var rotationProperty = new Property(TransformType.Rotation, dimension);
+                            //         var rotationEntry = controller.Properties[rotationProperty];
+                            // 
+                            //         if (rotationEntry.IsOverallEnabled)
+                            //         {
+                            //             var change = controller.Properties[rotationProperty].Change;
+                            //             change = GetCounterChange(rotationProperty.Type, change);
+                            //             rotationChange = rotationChange.Set(dimension, change);
+                            //         }
+                            //     }
+                            // 
+                            // }
+                            // else
+                            // {
+                                var change = GetCounterChange(property.Type, entry.Change);
+                                value = GetValue(property.Type, value, change);
+                            // }
                         }
+
                         if (property.Type == TransformType.Position)
                         {
+                            var relativePosition = GetRelativePosition(controller.Handler._data.position, controller.Handler._data.rotation, _data.position);
                             var scaleProperty = new Property(TransformType.Scale, property.Dimension);
                             var scaleEntry = controller.Properties[scaleProperty];
+
+                            // Handle Scale
                             if (scaleEntry.IsOverallEnabled)
                             {
-                                var offset = GetRelativePosition(controller.Handler._data.position, controller.Handler._data.rotation, _data.position).Get(property.Dimension);
-                                var change = offset * (scaleEntry.Change - 1);
-                                change = GetCounterChange(property.Type, change);
-                                value = GetValue(property.Type, value, change);
+                                var offset = relativePosition.Get(property.Dimension);
+                                offset *= scaleEntry.Change - 1;
+                                offset = GetCounterChange(property.Type, offset);
+                                value = GetValue(property.Type, value, offset);
+                            }
+
+                            // Handle Rotation
+                            var rotationChange = Vector3.zero;
+                            foreach (var dimension in EnumHelper.GetValues<Dimension>())
+                            {
+                                var rotationProperty = new Property(TransformType.Rotation, dimension);
+                                var rotationEntry = controller.Properties[rotationProperty];
+
+                                if (rotationEntry.IsOverallEnabled)
+                                {
+                                    var change = controller.Properties[rotationProperty].Change;
+                                    change = GetCounterChange(rotationProperty.Type, change);
+                                    rotationChange = rotationChange.Set(dimension, change);
+                                }
+                            }
+                            if (!Equals(rotationChange, Vector3.zero))
+                            {
+                                var offset = (Rotate(relativePosition, rotationChange) - relativePosition).Get(property.Dimension);
+                                if (scaleEntry.IsOverallEnabled)
+                                    offset *= scaleEntry.Change;
+                                value = GetValue(property.Type, value, offset);
                             }
                         }
                     }
@@ -340,6 +464,49 @@ namespace Cubeage
             }
 
             return value;
+        }
+
+        static Vector3 Rotate(Vector3 vector, Vector3 angles)
+        {
+            vector = RotateX(vector, angles.x);
+            vector = RotateY(vector, angles.y);
+            vector = RotateZ(vector, angles.z);
+            return vector;
+        }
+
+        public static Vector3 RotateX(Vector3 vector, float angle)
+        {
+            float sin = Mathf.Sin(angle * Mathf.Deg2Rad);
+            float cos = Mathf.Cos(angle * Mathf.Deg2Rad);
+
+
+            var result = vector;
+            result.y = (cos * vector.y) - (sin * vector.z);
+            result.z = (cos * vector.z) + (sin * vector.y);
+
+            return result;
+        }
+
+        public static Vector3 RotateY(Vector3 vector, float angle)
+        {
+            float sin = Mathf.Sin(angle * Mathf.Deg2Rad);
+            float cos = Mathf.Cos(angle * Mathf.Deg2Rad);
+
+            var result = vector;
+            result.x = (cos * vector.x) + (sin * vector.z);
+            result.z = (cos * vector.z) - (sin * vector.x);
+            return result;
+        }
+
+        public static Vector3 RotateZ(Vector3 vector, float angle)
+        {
+            float sin = Mathf.Sin(angle * Mathf.Deg2Rad);
+            float cos = Mathf.Cos(angle * Mathf.Deg2Rad);
+
+            var result = vector;
+            result.x = (cos * vector.x) - (sin * vector.y);
+            result.y = (cos * vector.y) + (sin * vector.x);
+            return result;
         }
 
         float GetCounterChange(TransformType type, float change)
