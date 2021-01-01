@@ -13,10 +13,10 @@ namespace Cubeage
         {
             get
             {
-                var current = _transform.parent;
+                var current = _transform?.parent;
                 while (current)
                 {
-                    if (_manager.TryGet(current, out var handler))
+                    if (_manager.TryGet(current, out var handler) && handler.IsValid())
                         return handler;
                     current = current.parent;
                 }
@@ -34,7 +34,7 @@ namespace Cubeage
                     var child = parent.GetChild(i);
                     if (Equals(child, _transform))
                         continue;
-                    if (_manager.TryGet(child, out var handler))
+                    if (_manager.TryGet(child, out var handler) && handler.IsValid())
                         yield return handler;
                 }
             }
@@ -59,7 +59,26 @@ namespace Cubeage
         [SerializeField]
         [SerializeReference]
         protected Transform _transform;
-        public Transform Transform => _transform;
+        public Transform Transform
+        {
+            get => _transform;
+            set
+            {
+                if (Equals(_transform, value))
+                    return;
+
+                _transform = value;
+                _data = new TransformData
+                {
+                    localPosition = value.localPosition,
+                    localEulerAngles = value.localEulerAngles,
+                    localScale = value.localScale,
+                    // position = GetRelativePosition(_manager.Root.transform, value.position),
+                    position = value.position,
+                    rotation = value.rotation,
+                };
+            }
+        }
 
         [SerializeField]
         protected TransformData _data;
@@ -78,7 +97,7 @@ namespace Cubeage
         protected TransformHandler _virtualParent;
         public TransformHandler VirtualParent
         {
-            get => _virtualParent;
+            get => _virtualParent != null && _virtualParent.IsValid() ? _virtualParent : null;
             set
             {
                 if (Equals(_virtualParent, value))
@@ -92,7 +111,7 @@ namespace Cubeage
             }
         }
 
-        public IEnumerable<TransformHandler> VirtualChildren => _manager.Handlers.Where(x => Equals(x._virtualParent, this));
+        public IEnumerable<TransformHandler> VirtualChildren => _manager.Handlers.Where(x => Equals(x.VirtualParent, this));
         #endregion
 
         [SerializeField]
@@ -104,7 +123,7 @@ namespace Cubeage
             for (var i = 0; i < transform.childCount; i++)
             {
                 var child = transform.GetChild(i);
-                if (_manager.TryGet(child, out var handler))
+                if (_manager.TryGet(child, out var handler) && handler.IsValid())
                     yield return handler;
                 else
                     foreach(var x in GetChildren(child))
@@ -115,21 +134,7 @@ namespace Cubeage
         public TransformHandler(TransformManager manager, Transform transform)
         {
             _manager = manager;
-            _transform = transform;
-            if (_transform.name == "LianJia_L_ctrl")
-            {
-                Debug.Log(GetRelativePosition(_transform.parent, _transform.position).x);
-                Debug.Log(_transform.localPosition.x);
-
-            }
-            _data = new TransformData
-            {
-                localPosition = transform.localPosition,
-                localEulerAngles = transform.localEulerAngles,
-                localScale = transform.localScale,
-                position = GetRelativePosition(_manager.Root.transform, transform.position),
-                rotation = transform.rotation,
-            };
+            Transform = transform;
         }
 
         public static Vector3 GetRelativePosition(Vector3 originPosition, Quaternion originRotation, Vector3 position)
@@ -267,6 +272,9 @@ namespace Cubeage
 
         public void Update(TransformType type)
         {
+            if (!IsValid())
+                return;
+
             Vector3 value = GetValue(type);
             if (!Equals(_transform.Get(type), value))
                 _transform.Set(type, value);

@@ -33,7 +33,7 @@ namespace Cubeage
 
         void RecordUndo(string name)
         {
-            Undo.RecordObjects(_avatarController.Manager.Handlers.Select(x => x.Transform).Cast<UnityEngine.Object>().Prepend(_avatarController).ToArray(), name);
+            Undo.RecordObjects(_avatarController.Manager.Handlers.Where(x => x.IsValid()).Select(x => x.Transform).Cast<UnityEngine.Object>().Prepend(_avatarController).ToArray(), name);
         }
 
         bool ConfirmRemove()
@@ -111,15 +111,17 @@ namespace Cubeage
                         _avatarController.IsEnabled = x;
                     });
             }
-            // using (Layout.Horizontal())
-            // {
-            //     Layout.Label("Target Avatar");
-            //     Layout.Object(_controller.Avatar)
-            //         .OnChanged(x =>
-            //         {
-            //             _controller.Avatar = x;
-            //         });
-            // }
+            /*
+            using (Layout.Horizontal())
+            {
+                Layout.Label("Target Avatar");
+                Layout.Object(_avatarController.Manager.Root)
+                    .OnChanged(x =>
+                    {
+                        _avatarController.Manager.Root = x;
+                    });
+            }
+            */
             /*
             int pickerID = 455454425;
             if (GUILayout.Button("Select"))
@@ -143,7 +145,18 @@ namespace Cubeage
                 using (Layout.Horizontal())
                 {
                     Layout.Foldout(_avatarController.Manager.IsExpanded).OnChanged(x => _avatarController.Manager.IsExpanded = x);
-                    Layout.Label($"Bones: {_avatarController.Manager.Handlers.Count}");
+                    Layout.Label($"Bone Hierarchy: {_avatarController.Manager.Handlers.Count}");
+                    Layout.FlexibleSpace();
+                    if (Layout.Button("Auto"))
+                    {
+                        RecordUndo("Auto Set Hierarchy");
+                        _avatarController.Manager.AutoSet();
+                    }
+                    if (Layout.Button("Reload"))
+                    {
+                        RecordUndo("Reload Hierarchy");
+                        _avatarController.Manager.Reload();
+                    }
                 }
 
                 if (_avatarController.Manager.IsExpanded)
@@ -295,7 +308,7 @@ namespace Cubeage
                                 {
                                     using (Layout.Horizontal())
                                     {
-                                        Layout.Label("Transform", GUILayout.MinWidth(50));
+                                        Layout.Label("Transform Children", GUILayout.MinWidth(50));
                                         Layout.FlexibleSpace();
                                         Layout.Toggle(bone.TransformChildren)
                                                 .OnChanged(x =>
@@ -303,7 +316,6 @@ namespace Cubeage
                                                     RecordUndo("Toggle Transform Children");
                                                     bone.TransformChildren = x;
                                                 });
-                                        Layout.Label("Children", GUILayout.MinWidth(50), GUILayout.MaxWidth(120));
                                     }
 
                                     foreach (var type in EnumHelper.GetValues<TransformType>())

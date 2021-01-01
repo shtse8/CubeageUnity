@@ -37,10 +37,7 @@ namespace Cubeage
                     return;
 
                 _root = value;
-                _handlers.Clear();
-                _handlers.AddRange(_root.GetComponentsInChildren<Transform>().Where(x => IsValid(x)).Select(x => new TransformHandler(this, x)));
-                foreach(var handler in _handlers)
-                    handler.VirtualParent = handler.Parent;
+                Reload();
             }
         }
 
@@ -77,6 +74,35 @@ namespace Cubeage
         }
 
 
+        public void Reload()
+        {
+            var transforms = _root.GetComponentsInChildren<Transform>().Where(x => IsValid(x));
+
+            // Remove invalid handlers
+            foreach (var handler in _handlers.ToArray())
+            {
+                if (!handler.IsValid() || !transforms.Contains(handler.Transform))
+                {
+                    _handlers.Remove(handler);
+                }
+            }
+
+            // Add new handlers
+            var newHandlers = new List<TransformHandler>();
+            foreach (var transform in transforms)
+            {
+                if (!TryGet(transform, out _))
+                {
+                    var handler = new TransformHandler(this, transform);
+                    _handlers.Add(handler);
+                    newHandlers.Add(handler);
+                }
+            }
+
+            foreach (var handler in newHandlers)
+                handler.VirtualParent = handler.Parent;
+        }
+
         public void Update()
         {
             foreach (var handler in _handlers)
@@ -93,6 +119,28 @@ namespace Cubeage
             {
                 handler.Update(boneControllers, hint);
             }
+        }
+
+        public void AutoSet()
+        {
+            var lists = new string[][]
+            {
+                new string [] { "Spine", "R Thigh", "R Calf", "R Foot", "R Toe0" },
+                new string [] { "Spine", "L Thigh", "L Calf", "L Foot", "L Toe0" },
+                new string [] { "Neck", "L Clavicle", "L UpperArm", "L Forearm", "L Hand" },
+                new string [] { "Neck", "R Clavicle", "R UpperArm", "R Forearm", "R Hand" },
+            };
+
+            foreach (var list in lists)
+                for (var i = 0; i < list.Length - 1; i++)
+                {
+                    var parent = _handlers.FirstOrDefault(x => x.Name.Contains(list[i], StringComparison.CurrentCultureIgnoreCase));
+                    var child = _handlers.FirstOrDefault(x => x.Name.Contains(list[i + 1], StringComparison.CurrentCultureIgnoreCase));
+                    if (parent != null && child != null)
+                        child.VirtualParent = parent;
+                    else
+                        Debug.Log($"Found {parent?.Name} {child?.Name}");
+                }
         }
 
     }
