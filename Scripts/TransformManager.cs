@@ -123,26 +123,24 @@ namespace Cubeage
 
         public void AutoSet()
         {
-            var lists = new string[][]
+            foreach (var handler in _handlers)
             {
-                new string [] { "Spine", "R Thigh", "R Calf", "R Foot", "R Toe0" },
-                new string [] { "Spine", "L Thigh", "L Calf", "L Foot", "L Toe0" },
-                new string [] { "Neck", "L Clavicle", "L UpperArm", "L Forearm", "L Hand" },
-                new string [] { "Neck", "R Clavicle", "R UpperArm", "R Forearm", "R Hand" },
-            };
-
-            foreach (var list in lists)
-                for (var i = 0; i < list.Length - 1; i++)
+                var parent = handler.TryGetTargetTransform(out var target) ? target.parent : handler.Transform.parent;
+                if (parent != null)
                 {
-                    var parent = _handlers.FirstOrDefault(x => x.Name.Contains(list[i], StringComparison.CurrentCultureIgnoreCase));
-                    var child = _handlers.FirstOrDefault(x => x.Name.Contains(list[i + 1], StringComparison.CurrentCultureIgnoreCase));
-                    if (parent != null && child != null)
-                        child.VirtualParent = parent;
-                    else
-                        Debug.Log($"Found {parent?.Name} {child?.Name}");
+                    if (TryGetHandler(parent, out var targetHandler))
+                    {
+                        handler.VirtualParent = targetHandler;
+                    }
                 }
+            }
         }
 
+        public bool TryGetHandler(Transform transform, out TransformHandler handler)
+        {
+            handler = _handlers.FirstOrDefault(x => x.TryGetTargetTransform(out var target) && target == transform);
+            return handler != null;
+        }
     }
 
 }

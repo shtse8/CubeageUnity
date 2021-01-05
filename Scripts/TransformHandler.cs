@@ -465,6 +465,11 @@ namespace Cubeage
         public bool TryGetTargetTransform(out Transform target)
         {
             target = null;
+            if (Equals(_transform.parent.name + _manager.Suffix, _transform.name))
+            {
+                target = _transform.parent;
+                return true;
+            }
             for (var i = 0; i < _transform.childCount; i++)
             {
                 var child = _transform.GetChild(i);

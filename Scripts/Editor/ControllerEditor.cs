@@ -58,17 +58,17 @@ namespace Cubeage
                                     child.IsExpanded = x;
                                 });
                             Layout.ObjectLabel(child.Transform);
-                            // if (handler.TryGetTargetTransform(out var target))
-                            // {
-                            //     Layout.ObjectLabel(target);
-                            // }
-                            // else
-                            // {
-                            //     using (Layout.Color(Color.red))
-                            //     {
-                            //         Layout.ObjectLabel<GameObject>(null);
-                            //     }
-                            // }
+                            if (child.TryGetTargetTransform(out var target))
+                            {
+                                Layout.ObjectLabel(target);
+                            }
+                            else
+                            {
+                                using (Layout.Color(Color.red))
+                                {
+                                    Layout.ObjectLabel<GameObject>(null);
+                                }
+                            }
                         }
 
                         if (child.IsExpanded)
