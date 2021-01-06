@@ -26,7 +26,8 @@ namespace Cubeage
                 _isExpanded = value;
             }
         }
-
+        
+        [SerializeReference]
         [SerializeField]
         protected Transform _root;
         public Transform Root {
@@ -122,17 +123,12 @@ namespace Cubeage
         }
 
         public void AutoSet()
-        {
+        { 
             foreach (var handler in _handlers)
             {
                 var parent = handler.TryGetTargetTransform(out var target) ? target.parent : handler.Transform.parent;
-                if (parent != null)
-                {
-                    if (TryGetHandler(parent, out var targetHandler))
-                    {
-                        handler.VirtualParent = targetHandler;
-                    }
-                }
+                if (parent != null && TryGetHandler(parent, out var targetHandler))
+                    handler.VirtualParent = targetHandler;
             }
         }
 

@@ -106,6 +106,14 @@ namespace Cubeage
                 if (Equals(this, value))
                     throw new Exception("Cannot set itself as parent.");
 
+                var parent = value;
+                while (parent != null)
+                {
+                    if (Equals(parent, this))
+                        throw new Exception("Cannot set itself due to recursion.");
+                    parent = parent.VirtualParent;
+                }
+
                 _virtualParent = value;
                 Update();
             }

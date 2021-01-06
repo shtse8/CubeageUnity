@@ -20,8 +20,9 @@ namespace Cubeage
         public TransformHandler Handler => _transformHandler;
 
         [SerializeField]
-        protected SerializableDictionary<Property, Entry> _properties = new SerializableDictionary<Property, Entry>();
-        public Dictionary<Property, Entry> Properties => _properties.ToDictionary(x => x.Key, x => x.Value);
+        [SerializeReference]
+        protected List<Entry> _properties = new List<Entry>();
+        public Dictionary<Property, Entry> Properties => _properties.ToDictionary(x => x.Property, x => x);
 
         // IsEnabled
         [SerializeField]
@@ -60,7 +61,7 @@ namespace Cubeage
             _transformHandler = transformHandler;
             foreach (var property in Property.GetAll())
             {
-                _properties.Add(property, new Entry(this, property));
+                _properties.Add(new Entry(this, property));
             }
         }
 
