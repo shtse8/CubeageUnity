@@ -101,7 +101,9 @@ namespace Cubeage
             }
 
             foreach (var handler in newHandlers)
-                handler.VirtualParent = handler.Parent;
+            {
+                AutoSetParent(handler);
+            }
         }
 
         public void Update()
@@ -122,16 +124,22 @@ namespace Cubeage
             }
         }
 
-        public void AutoSet()
+        public void AutoSetParent()
         { 
             foreach (var handler in _handlers)
             {
-                var parent = handler.TryGetTargetTransform(out var target) ? target.parent : handler.Transform.parent;
-                if (parent != null && TryGetHandler(parent, out var targetHandler))
-                    handler.VirtualParent = targetHandler;
+                AutoSetParent(handler);
             }
         }
 
+        public void AutoSetParent(TransformHandler handler)
+        {
+            var parent = handler.TryGetTargetTransform(out var target) ? target.parent : handler.Transform.parent;
+            if (parent != null && TryGetHandler(parent, out var targetHandler))
+                handler.VirtualParent = targetHandler;
+            else
+                handler.VirtualParent = handler.Parent;
+        }
         public bool TryGetHandler(Transform transform, out TransformHandler handler)
         {
             handler = _handlers.FirstOrDefault(x => x.TryGetTargetTransform(out var target) && target == transform);

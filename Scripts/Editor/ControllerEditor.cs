@@ -150,7 +150,7 @@ namespace Cubeage
                     if (Layout.Button("Auto"))
                     {
                         RecordUndo("Auto Set Hierarchy");
-                        _avatarController.Manager.AutoSet();
+                        _avatarController.Manager.AutoSetParent();
                     }
                     if (Layout.Button("Reload"))
                     {
