@@ -445,7 +445,7 @@ namespace Cubeage
                 case TransformType.Position:
                     return value + change;
                 case TransformType.Rotation:
-                    return Quaternion.Euler(value) * change;
+                    return (Quaternion.Euler(value) * Quaternion.Euler(change)).eulerAngles;
                 case TransformType.Scale:
                     return Vector3.Scale(value, change);
                 default:
