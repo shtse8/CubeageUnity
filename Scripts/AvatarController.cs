@@ -64,6 +64,11 @@ namespace Cubeage
         public IList<Controller> Controllers => _controllers.ToArray();
         #endregion
 
+        public Controller GetController(string name)
+        {
+            return _controllers.First(x => x.Name == name);
+        }
+
         void Reset()
         {
             Avatar = gameObject;
