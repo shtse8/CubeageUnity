@@ -5,114 +5,134 @@ using UnityEngine;
 
 namespace Cubeage
 {
-    [ExecuteInEditMode]
+	
+	public class EyeBlinkController
+	{
+		private Transform Upper { get; }
+		private Transform Lower { get; }
+
+		private readonly Quaternion _upperLocalRotation;
+		private readonly Quaternion _lowerLocalRotation;
+		private readonly Quaternion _upperLocalRotationTarget;
+		private readonly Quaternion _lowerLocalRotationTarget;
+
+		private readonly Vector3 _upperLocalPosition;
+		private readonly Vector3 _lowerLocalPosition;
+		private readonly Vector3 _upperLocalPositionTarget;
+		private readonly Vector3 _lowerLocalPositionTarget;
+		
+		public EyeBlinkController(Transform upper, Transform lower, float ratio)
+		{
+			Upper = upper;
+			Lower = lower;
+			
+			// Update Origins
+			_upperLocalPosition = Upper.localPosition;
+			_lowerLocalPosition = Lower.localPosition;
+			_upperLocalRotation = Upper.localRotation;
+			_lowerLocalRotation = Lower.localRotation;
+				
+			// Update Targets
+			_upperLocalPositionTarget = Upper.parent.transform.InverseTransformPoint(Upper.position +
+				(Lower.position - Upper.position) * ratio);
+			_lowerLocalPositionTarget =
+				Lower.parent.transform.InverseTransformPoint(Lower.position +
+				                                             (Upper.position -
+				                                              Lower.position) * (1 - ratio));
+
+			_upperLocalRotationTarget = Quaternion.Inverse(Upper.parent.rotation) *
+			                           Quaternion.Slerp(Upper.rotation, Lower.rotation, ratio);
+			_lowerLocalRotationTarget = Quaternion.Inverse(Lower.parent.rotation) *
+			                           Quaternion.Slerp(Lower.rotation, Upper.rotation, (1-ratio));
+		}
+
+		public void Set(float ratio)
+		{
+			Upper.localPosition = _upperLocalPosition + (_upperLocalPositionTarget - _upperLocalPosition) * ratio;
+			Lower.localPosition = _lowerLocalPosition + (_lowerLocalPositionTarget - _lowerLocalPosition) * ratio;
+			Upper.localRotation = Quaternion.Slerp(_upperLocalRotation, _upperLocalRotationTarget, ratio); 
+			Lower.localRotation = Quaternion.Slerp(_lowerLocalRotation, _lowerLocalRotationTarget, ratio);
+		}
+	}
+	
+    [AddComponentMenu("Cubeage/Avatar Controller")]
     public class AutoBlink : MonoBehaviour
     {
 		public bool isActive = true;
-		public AvatarController avatarController;
-
-		public float ratio_Close = 0;
-		public float ratio_HalfClose = 50;
-		public float ratio_Open = 100;
-
-		private bool timerStarted = false;
-		private bool isBlink = false;
-
-		public float timeBlink = 0.4f;
-		private float timeRemining = 0.0f;
+		
+		public Transform upperLeftEyeLip;
+		public Transform lowerLeftEyeLip;
+		public Transform upperRightEyeLip;
+		public Transform lowerRightEyeLip;
+		
+		[Range(0.1f, 1.0f)]
+		public float duration = 0.3f;
 
 		[Range(0.0f, 1.0f)]
 		public float threshold = 0.3f;
 		public float interval = 3.0f;
 
+		[Range(0.0f, 1.0f)]
+		public float ratio = 0.9f;
+		
+		[Range(0, 10)]
+		public int steps = 2;
+		
+		private EyeBlinkController _leftEyeBlinkController;
+		private EyeBlinkController _rightEyeBlinkController;
+		private float _timeRemining;
+		
+		
         private void Reset()
         {
-			avatarController = gameObject.GetComponent<AvatarController>();
+			upperLeftEyeLip = gameObject.GetComponentsInChildren<Transform>()
+				.FirstOrDefault(x => x.name == "ShangYanPi_L_blink_ctrl");
+			upperRightEyeLip = gameObject.GetComponentsInChildren<Transform>()
+				.FirstOrDefault(x => x.name == "ShangYanPi_R_blink_ctrl");
+			lowerLeftEyeLip = gameObject.GetComponentsInChildren<Transform>()
+				.FirstOrDefault(x => x.name == "XiaYanPi_L_blink_ctrl");
+			lowerRightEyeLip = gameObject.GetComponentsInChildren<Transform>()
+				.FirstOrDefault(x => x.name == "XiaYanPi_R_blink_ctrl");
+
         }
-
-        enum Status
-		{
-			Close,
-			HalfClose,
-			Open
-		}
-
-
-		private Status eyeStatus;
-
-		void Awake()
-		{
-		}
 
 		void Start()
 		{
-			ResetTimer();
-			StartCoroutine("RandomChange");
+			StartCoroutine(nameof(RandomChange));
 		}
 
-
-		void ResetTimer()
+		void Blink()
 		{
-			timeRemining = timeBlink;
-			timerStarted = false;
+			_leftEyeBlinkController = new EyeBlinkController(upperLeftEyeLip, lowerLeftEyeLip, ratio);
+			_rightEyeBlinkController = new EyeBlinkController(upperRightEyeLip, lowerRightEyeLip, ratio);
+			_timeRemining = duration;
 		}
-
 
 		void Update()
 		{
-			if (!timerStarted)
-			{
-				eyeStatus = Status.Close;
-				timerStarted = true;
-			}
-			if (timerStarted)
-			{
-				timeRemining -= Time.deltaTime;
-				if (timeRemining <= 0.0f)
-				{
-					eyeStatus = Status.Open;
-					ResetTimer();
-				}
-				else if (timeRemining <= timeBlink * 0.3f)
-				{
-					eyeStatus = Status.HalfClose;
-				}
-			}
-		}
-
-		void LateUpdate()
-		{
-			if (!isActive)
+			if (_timeRemining <= 0)
 				return;
-
-			if (isBlink)
-			{
-				var controller = avatarController.GetController("eye");
-				switch (eyeStatus)
-				{
-					case Status.Close:
-						controller.Value = ratio_Close;
-						break;
-					case Status.HalfClose:
-						controller.Value = ratio_HalfClose;
-						break;
-					case Status.Open:
-						controller.Value = ratio_Open;
-						isBlink = false;
-						break;
-				}
-			}
+			
+			_timeRemining -= Time.deltaTime;
+			if (_timeRemining < 0)
+				_timeRemining = 0;
+			var setRatio = _timeRemining / duration;
+			if (steps > 0)
+				setRatio = Mathf.Ceil(setRatio / (1f / steps)) * (1f / steps);
+			_rightEyeBlinkController.Set(setRatio);
+			_leftEyeBlinkController.Set(setRatio);
 		}
 
 		// ランダム判定用関数
-		IEnumerator RandomChange()
+		private IEnumerator RandomChange()
 		{
 			while (true)
 			{
-				var _seed = Random.Range(0.0f, 1.0f);
-				if (!isBlink && _seed > threshold)
+				if (isActive)
 				{
-					isBlink = true;
+					var seed = Random.Range(0.0f, 1.0f);
+					if (_timeRemining <= 0 && seed > threshold)
+						Blink();
 				}
 				yield return new WaitForSeconds(interval);
 			}
