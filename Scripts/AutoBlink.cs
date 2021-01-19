@@ -55,7 +55,7 @@ namespace Cubeage
 		}
 	}
 	
-    [AddComponentMenu("Cubeage/Avatar Controller")]
+    [AddComponentMenu("Cubeage/Auto Blink")]
     public class AutoBlink : MonoBehaviour
     {
 		public bool isActive = true;
