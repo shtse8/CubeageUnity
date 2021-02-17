@@ -11,73 +11,73 @@ namespace Cubeage
     {
         [SerializeReference] 
         [SerializeField]
-        protected Controller _controller;
-        public Controller Controller => _controller;
+        protected Controller controller;
+        public Controller Controller => controller;
 
         [SerializeReference] 
         [SerializeField]
-        protected TransformHandler _transformHandler;
-        public TransformHandler Handler => _transformHandler;
+        protected TransformHandler transformHandler;
+        public TransformHandler Handler => transformHandler;
 
         [SerializeField]
         [SerializeReference]
-        protected List<Entry> _properties = new List<Entry>();
-        public Dictionary<Property, Entry> Properties => _properties.ToDictionary(x => x.Property, x => x);
+        protected List<Entry> properties = new List<Entry>();
+        public Dictionary<Property, Entry> Properties => properties.ToDictionary(x => x.Property, x => x);
 
         // IsEnabled
         [SerializeField]
-        protected bool _transformChildren = false;
+        protected bool transformChildren;
         public bool TransformChildren
         {
-            get => _transformChildren;
+            get => transformChildren;
             set
             {
-                if (Equals(_transformChildren, value))
+                if (Equals(transformChildren, value))
                     return;
 
-                _transformChildren = value;
+                transformChildren = value;
 
-                _transformHandler.Update(this, UpdateHints.UpdatedTransformChildren);
+                transformHandler.Update(this, UpdateHints.UpdatedTransformChildren);
             }
         }
 
         [SerializeField]
-        public bool _isExpanded = false;
+        public bool isExpanded;
         public bool IsExpanded
         {
-            get => _isExpanded;
+            get => isExpanded;
             set
             {
-                if (Equals(_isExpanded, value))
+                if (Equals(isExpanded, value))
                     return;
 
-                _isExpanded = value;
+                isExpanded = value;
             }
         }
 
         public TransformController(Controller boneController, TransformHandler transformHandler)
         {
-            _controller = boneController;
-            _transformHandler = transformHandler;
+            controller = boneController;
+            this.transformHandler = transformHandler;
             foreach (var property in Property.GetAll())
             {
-                _properties.Add(new Entry(this, property));
+                properties.Add(new Entry(this, property));
             }
         }
 
         [SerializeField]
-        private bool _isEnabled = true;
+        private bool isEnabled = true;
         public bool IsEnabled
         {
-            get => _isEnabled;
+            get => isEnabled;
             set
             {
-                if (Equals(_isEnabled, value))
+                if (Equals(isEnabled, value))
                     return;
 
-                _isEnabled = value;
+                isEnabled = value;
 
-                _transformHandler.Update(this, UpdateHints.ToggledEnable);
+                transformHandler.Update(this, UpdateHints.ToggledEnable);
             }
         }
 
@@ -93,14 +93,14 @@ namespace Cubeage
 
         public Transform Transform
         {
-            get => _transformHandler?.Transform;
+            get => transformHandler?.Transform;
             set
             {
-                var handler = _controller.AvatarController.Manager.Get(value);
-                if (!Equals(_transformHandler, handler))
+                var handler = controller.AvatarController.Manager.Get(value);
+                if (!Equals(transformHandler, handler))
                 {
-                    _transformHandler?.RemoveTransformController(this);
-                    _transformHandler = handler;
+                    transformHandler?.RemoveTransformController(this);
+                    transformHandler = handler;
                     handler.AddTransformController(this);
                 }
             }
@@ -108,7 +108,7 @@ namespace Cubeage
 
         public bool Equals(TransformController other)
         {
-            return Equals(_controller, other._controller);
+            return other != null && Equals(controller, other.controller);
         }
     }
 

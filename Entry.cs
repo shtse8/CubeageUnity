@@ -11,85 +11,85 @@ namespace Cubeage
     {
         [SerializeReference]
         [SerializeField]
-        protected TransformController _bone;
+        protected TransformController bone;
 
         [SerializeField]
-        protected Property _property;
-        public Property Property => _property;
+        protected Property property;
+        public Property Property => property;
 
 
 
         // IsEnabled
         [SerializeField]
-        protected bool _isEnabled = false;
+        protected bool isEnabled;
         public bool IsEnabled
         {
-            get => _isEnabled;
+            get => isEnabled;
             set
             {
-                if (Equals(_isEnabled, value))
+                if (Equals(isEnabled, value))
                     return;
 
-                _isEnabled = value;
-                _bone.Handler.Update(_property, UpdateHints.ToggledEnable);
+                isEnabled = value;
+                bone.Handler.Update(property, UpdateHints.ToggledEnable);
             }
         }
 
 
         // Min
         [SerializeField]
-        protected float _min;
+        protected float min;
         public float Min
         {
-            get => _min;
+            get => min;
             set
             {
-                if (Equals(_min, value))
+                if (Equals(min, value))
                     return;
 
-                _min = value;
-                _bone.Handler.Update(_property, UpdateHints.UpdatedChange);
+                min = value;
+                bone.Handler.Update(property, UpdateHints.UpdatedChange);
             }
         }
 
         // Max
         [SerializeField]
-        public float _max;
+        public float max;
         public float Max
         {
-            get => _max;
+            get => max;
             set
             {
-                if (Equals(_max, value))
+                if (Equals(max, value))
                     return;
 
-                _max = value;
-                _bone.Handler.Update(_property, UpdateHints.UpdatedChange);
+                max = value;
+                bone.Handler.Update(property, UpdateHints.UpdatedChange);
             }
         }
 
-        public float Value => IsOverallEnabled ? GetValue(_bone.Controller.Value) : DefaultValue;
+        public float Value => IsOverallEnabled ? GetValue(bone.Controller.Value) : DefaultValue;
 
-        public bool IsOverallEnabled => _isEnabled
-            && _bone.IsEnabled
-            && _bone.Controller.IsEnabled
-            && _bone.Controller.AvatarController.IsEnabled;
+        public bool IsOverallEnabled => isEnabled
+            && bone.IsEnabled
+            && bone.Controller.IsEnabled
+            && bone.Controller.AvatarController.IsEnabled;
 
-        public float DefaultValue => _property.Type == TransformType.Scale ? 1 : 0;
+        public float DefaultValue => property.Type == TransformType.Scale ? 1 : 0;
 
         public float Change => GetChange(Value, DefaultValue);
 
         public Entry(TransformController bone, Property property)
         {
-            _bone = bone;
-            _property = property;
-            _min = DefaultValue;
-            _max = DefaultValue;
+            this.bone = bone;
+            this.property = property;
+            min = DefaultValue;
+            max = DefaultValue;
         }
 
-        float GetChange(float value, float current)
+        private float GetChange(float value, float current)
         {
-            switch (_property.Type)
+            switch (property.Type)
             {
                 case TransformType.Position:
                 case TransformType.Rotation:
@@ -103,7 +103,7 @@ namespace Cubeage
 
         public float GetValue(float scale)
         {
-            switch (_property.Type)
+            switch (property.Type)
             {
                 case TransformType.Position:
                 case TransformType.Rotation:

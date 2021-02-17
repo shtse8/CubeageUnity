@@ -19,20 +19,18 @@ public abstract class SerializableDictionaryBase
 [Serializable]
 public abstract class SerializableDictionaryBase<TKey, TValue, TValueStorage> : SerializableDictionaryBase, IDictionary<TKey, TValue>, IDictionary, ISerializationCallbackReceiver, IDeserializationCallback, ISerializable
 {
-	Dictionary<TKey, TValue> m_dict;
-	[SerializeField]
-	TKey[] m_keys;
-	[SerializeField]
-	TValueStorage[] m_values;
+	private Dictionary<TKey, TValue> _mDict;
+	[SerializeField] private TKey[] mKeys;
+	[SerializeField] private TValueStorage[] mValues;
 
 	public SerializableDictionaryBase()
 	{
-		m_dict = new Dictionary<TKey, TValue>();
+		_mDict = new Dictionary<TKey, TValue>();
 	}
 
 	public SerializableDictionaryBase(IDictionary<TKey, TValue> dict)
 	{
-		m_dict = new Dictionary<TKey, TValue>(dict);
+		_mDict = new Dictionary<TKey, TValue>(dict);
 	}
 
 	protected abstract void SetValue(TValueStorage[] storage, int i, TValue value);
@@ -40,151 +38,151 @@ public abstract class SerializableDictionaryBase<TKey, TValue, TValueStorage> : 
 
 	public void CopyFrom(IDictionary<TKey, TValue> dict)
 	{
-		m_dict.Clear();
+		_mDict.Clear();
 		foreach (var kvp in dict)
 		{
-			m_dict[kvp.Key] = kvp.Value;
+			_mDict[kvp.Key] = kvp.Value;
 		}
 	}
 
 	public void OnAfterDeserialize()
 	{
-		if (m_keys != null && m_values != null && m_keys.Length == m_values.Length)
+		if (mKeys != null && mValues != null && mKeys.Length == mValues.Length)
 		{
-			m_dict.Clear();
-			int n = m_keys.Length;
+			_mDict.Clear();
+			int n = mKeys.Length;
 			for (int i = 0; i < n; ++i)
 			{
-				m_dict[m_keys[i]] = GetValue(m_values, i);
+				_mDict[mKeys[i]] = GetValue(mValues, i);
 			}
 
-			m_keys = null;
-			m_values = null;
+			mKeys = null;
+			mValues = null;
 		}
 	}
 
 	public void OnBeforeSerialize()
 	{
-		int n = m_dict.Count;
-		m_keys = new TKey[n];
-		m_values = new TValueStorage[n];
+		int n = _mDict.Count;
+		mKeys = new TKey[n];
+		mValues = new TValueStorage[n];
 
 		int i = 0;
-		foreach (var kvp in m_dict)
+		foreach (var kvp in _mDict)
 		{
-			m_keys[i] = kvp.Key;
-			SetValue(m_values, i, kvp.Value);
+			mKeys[i] = kvp.Key;
+			SetValue(mValues, i, kvp.Value);
 			++i;
 		}
 	}
 
 	#region IDictionary<TKey, TValue>
 
-	public ICollection<TKey> Keys { get { return ((IDictionary<TKey, TValue>)m_dict).Keys; } }
-	public ICollection<TValue> Values { get { return ((IDictionary<TKey, TValue>)m_dict).Values; } }
-	public int Count { get { return ((IDictionary<TKey, TValue>)m_dict).Count; } }
-	public bool IsReadOnly { get { return ((IDictionary<TKey, TValue>)m_dict).IsReadOnly; } }
+	public ICollection<TKey> Keys { get { return ((IDictionary<TKey, TValue>)_mDict).Keys; } }
+	public ICollection<TValue> Values { get { return ((IDictionary<TKey, TValue>)_mDict).Values; } }
+	public int Count { get { return ((IDictionary<TKey, TValue>)_mDict).Count; } }
+	public bool IsReadOnly { get { return ((IDictionary<TKey, TValue>)_mDict).IsReadOnly; } }
 
 	public TValue this[TKey key]
 	{
-		get { return ((IDictionary<TKey, TValue>)m_dict)[key]; }
-		set { ((IDictionary<TKey, TValue>)m_dict)[key] = value; }
+		get { return ((IDictionary<TKey, TValue>)_mDict)[key]; }
+		set { ((IDictionary<TKey, TValue>)_mDict)[key] = value; }
 	}
 
 	public void Add(TKey key, TValue value)
 	{
-		((IDictionary<TKey, TValue>)m_dict).Add(key, value);
+		((IDictionary<TKey, TValue>)_mDict).Add(key, value);
 	}
 
 	public bool ContainsKey(TKey key)
 	{
-		return ((IDictionary<TKey, TValue>)m_dict).ContainsKey(key);
+		return ((IDictionary<TKey, TValue>)_mDict).ContainsKey(key);
 	}
 
 	public bool Remove(TKey key)
 	{
-		return ((IDictionary<TKey, TValue>)m_dict).Remove(key);
+		return ((IDictionary<TKey, TValue>)_mDict).Remove(key);
 	}
 
 	public bool TryGetValue(TKey key, out TValue value)
 	{
-		return ((IDictionary<TKey, TValue>)m_dict).TryGetValue(key, out value);
+		return ((IDictionary<TKey, TValue>)_mDict).TryGetValue(key, out value);
 	}
 
 	public void Add(KeyValuePair<TKey, TValue> item)
 	{
-		((IDictionary<TKey, TValue>)m_dict).Add(item);
+		((IDictionary<TKey, TValue>)_mDict).Add(item);
 	}
 
 	public void Clear()
 	{
-		((IDictionary<TKey, TValue>)m_dict).Clear();
+		((IDictionary<TKey, TValue>)_mDict).Clear();
 	}
 
 	public bool Contains(KeyValuePair<TKey, TValue> item)
 	{
-		return ((IDictionary<TKey, TValue>)m_dict).Contains(item);
+		return ((IDictionary<TKey, TValue>)_mDict).Contains(item);
 	}
 
 	public void CopyTo(KeyValuePair<TKey, TValue>[] array, int arrayIndex)
 	{
-		((IDictionary<TKey, TValue>)m_dict).CopyTo(array, arrayIndex);
+		((IDictionary<TKey, TValue>)_mDict).CopyTo(array, arrayIndex);
 	}
 
 	public bool Remove(KeyValuePair<TKey, TValue> item)
 	{
-		return ((IDictionary<TKey, TValue>)m_dict).Remove(item);
+		return ((IDictionary<TKey, TValue>)_mDict).Remove(item);
 	}
 
 	public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator()
 	{
-		return ((IDictionary<TKey, TValue>)m_dict).GetEnumerator();
+		return ((IDictionary<TKey, TValue>)_mDict).GetEnumerator();
 	}
 
 	IEnumerator IEnumerable.GetEnumerator()
 	{
-		return ((IDictionary<TKey, TValue>)m_dict).GetEnumerator();
+		return ((IDictionary<TKey, TValue>)_mDict).GetEnumerator();
 	}
 
 	#endregion
 
 	#region IDictionary
 
-	public bool IsFixedSize { get { return ((IDictionary)m_dict).IsFixedSize; } }
-	ICollection IDictionary.Keys { get { return ((IDictionary)m_dict).Keys; } }
-	ICollection IDictionary.Values { get { return ((IDictionary)m_dict).Values; } }
-	public bool IsSynchronized { get { return ((IDictionary)m_dict).IsSynchronized; } }
-	public object SyncRoot { get { return ((IDictionary)m_dict).SyncRoot; } }
+	public bool IsFixedSize { get { return ((IDictionary)_mDict).IsFixedSize; } }
+	ICollection IDictionary.Keys { get { return ((IDictionary)_mDict).Keys; } }
+	ICollection IDictionary.Values { get { return ((IDictionary)_mDict).Values; } }
+	public bool IsSynchronized { get { return ((IDictionary)_mDict).IsSynchronized; } }
+	public object SyncRoot { get { return ((IDictionary)_mDict).SyncRoot; } }
 
 	public object this[object key]
 	{
-		get { return ((IDictionary)m_dict)[key]; }
-		set { ((IDictionary)m_dict)[key] = value; }
+		get { return ((IDictionary)_mDict)[key]; }
+		set { ((IDictionary)_mDict)[key] = value; }
 	}
 
 	public void Add(object key, object value)
 	{
-		((IDictionary)m_dict).Add(key, value);
+		((IDictionary)_mDict).Add(key, value);
 	}
 
 	public bool Contains(object key)
 	{
-		return ((IDictionary)m_dict).Contains(key);
+		return ((IDictionary)_mDict).Contains(key);
 	}
 
 	IDictionaryEnumerator IDictionary.GetEnumerator()
 	{
-		return ((IDictionary)m_dict).GetEnumerator();
+		return ((IDictionary)_mDict).GetEnumerator();
 	}
 
 	public void Remove(object key)
 	{
-		((IDictionary)m_dict).Remove(key);
+		((IDictionary)_mDict).Remove(key);
 	}
 
 	public void CopyTo(Array array, int index)
 	{
-		((IDictionary)m_dict).CopyTo(array, index);
+		((IDictionary)_mDict).CopyTo(array, index);
 	}
 
 	#endregion
@@ -193,7 +191,7 @@ public abstract class SerializableDictionaryBase<TKey, TValue, TValueStorage> : 
 
 	public void OnDeserialization(object sender)
 	{
-		((IDeserializationCallback)m_dict).OnDeserialization(sender);
+		((IDeserializationCallback)_mDict).OnDeserialization(sender);
 	}
 
 	#endregion
@@ -202,12 +200,12 @@ public abstract class SerializableDictionaryBase<TKey, TValue, TValueStorage> : 
 
 	protected SerializableDictionaryBase(SerializationInfo info, StreamingContext context)
 	{
-		m_dict = new Dictionary<TKey, TValue>(info, context);
+		_mDict = new Dictionary<TKey, TValue>(info, context);
 	}
 
 	public void GetObjectData(SerializationInfo info, StreamingContext context)
 	{
-		((ISerializable)m_dict).GetObjectData(info, context);
+		((ISerializable)_mDict).GetObjectData(info, context);
 	}
 
 	#endregion
@@ -219,7 +217,7 @@ public static class SerializableDictionary
 {
 	public class Storage<T> : SerializableDictionaryBase.Storage
 	{
-		public T data;
+		public T Data;
 	}
 }
 
@@ -252,12 +250,12 @@ public class SerializableDictionary<TKey, TValue, TValueStorage> : SerializableD
 
 	protected override TValue GetValue(TValueStorage[] storage, int i)
 	{
-		return storage[i].data;
+		return storage[i].Data;
 	}
 
 	protected override void SetValue(TValueStorage[] storage, int i, TValue value)
 	{
 		storage[i] = new TValueStorage();
-		storage[i].data = value;
+		storage[i].Data = value;
 	}
 }

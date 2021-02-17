@@ -142,7 +142,7 @@ namespace Cubeage.Avatar.Editor.Util
             });
         }
 
-        private static double lastClickTime;
+        private static double _lastClickTime;
         public static void ObjectLabel<T>(T value) where T : UnityEngine.Object
         {
             if (GUILayout.Button(EditorGUIUtility.ObjectContent(value, typeof(T)), new GUIStyle(EditorStyles.textField)
@@ -151,7 +151,7 @@ namespace Cubeage.Avatar.Editor.Util
                 imagePosition = value ? ImagePosition.ImageLeft : ImagePosition.TextOnly
             }) && value)
             {
-                if (EditorApplication.timeSinceStartup - lastClickTime < 0.3)
+                if (EditorApplication.timeSinceStartup - _lastClickTime < 0.3)
                 {
                     if (value is Component component)
                     {
@@ -161,7 +161,7 @@ namespace Cubeage.Avatar.Editor.Util
                 } else
                 {
                     EditorGUIUtility.PingObject(value);
-                    lastClickTime = EditorApplication.timeSinceStartup;
+                    _lastClickTime = EditorApplication.timeSinceStartup;
                 }
             }
         }

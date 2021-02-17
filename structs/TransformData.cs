@@ -19,18 +19,18 @@ namespace Cubeage
 
     public struct TransformUpdate
     {
-        public TransformHandler handler;
-        public TransformType type;
+        public TransformHandler Handler;
+        public TransformType Type;
 
         public TransformUpdate(TransformHandler handler, Property property)
         {
-            this.handler = handler;
-            this.type = property.Type;
+            this.Handler = handler;
+            this.Type = property.Type;
         }
         public TransformUpdate(TransformHandler handler, TransformType type)
         {
-            this.handler = handler;
-            this.type = type;
+            this.Handler = handler;
+            this.Type = type;
         }
     }
 

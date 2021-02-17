@@ -11,25 +11,25 @@ namespace Cubeage
     {
         [SerializeReference]
         [SerializeField]
-        protected TransformManager _manager = new TransformManager();
-        public TransformManager Manager => _manager;
+        protected TransformManager manager = new TransformManager();
+        public TransformManager Manager => manager;
 
 
         #region Avatar
         [SerializeReference]
         [SerializeField]
-        private GameObject _avatar;
+        private GameObject avatar;
 
         public GameObject Avatar
         {
-            get => _avatar;
+            get => avatar;
             set
             {
-                if (Equals(_avatar, value))
+                if (Equals(avatar, value))
                     return;
 
-                _avatar = value;
-                _manager.Root = _avatar.transform;
+                avatar = value;
+                manager.Root = avatar.transform;
             }
         }
         #endregion
@@ -39,19 +39,19 @@ namespace Cubeage
 
         #region isEnabled
         [SerializeField]
-        private bool _isEnabled = true;
+        private bool isEnabled = true;
 
         public bool IsEnabled
         {
-            get => _isEnabled;
+            get => isEnabled;
             set
             {
-                if (Equals(_isEnabled, value))
+                if (Equals(isEnabled, value))
                     return;
 
-                _isEnabled = value;
+                isEnabled = value;
 
-                _manager.Update(_controllers.Where(x => x.IsEnabled).SelectMany(x => x.BoneControllers), UpdateHints.ToggledEnable);
+                manager.Update(controllers.Where(x => x.IsEnabled).SelectMany(x => x.BoneControllers), UpdateHints.ToggledEnable);
             }
         }
 
@@ -60,16 +60,16 @@ namespace Cubeage
         #region Controllers
         [SerializeField]
         [SerializeReference]
-        private List<Controller> _controllers = new List<Controller>();
-        public IList<Controller> Controllers => _controllers.ToArray();
+        private List<Controller> controllers = new List<Controller>();
+        public IList<Controller> Controllers => controllers.ToArray();
         #endregion
 
         public Controller GetController(string name)
         {
-            return _controllers.First(x => x.Name == name);
+            return controllers.First(x => x.Name == name);
         }
 
-        void Reset()
+        private void Reset()
         {
             Avatar = gameObject;
         }
@@ -79,17 +79,17 @@ namespace Cubeage
         public void Remove(Controller controller)
         {
             controller.IsEnabled = false;
-            _controllers.Remove(controller);
+            controllers.Remove(controller);
         }
 
         public void AddController()
         {
-            _controllers.Add(new Controller(this, $"Controller {_controllers.Count + 1}"));
+            controllers.Add(new Controller(this, $"Controller {controllers.Count + 1}"));
         }
 
         public void SetToDefault()
         {
-            foreach (var controller in _controllers)
+            foreach (var controller in controllers)
             {
                 controller.SetToDefault();
             }

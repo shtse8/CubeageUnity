@@ -13,10 +13,10 @@ namespace Cubeage
         {
             get
             {
-                var current = _transform?.parent;
+                var current = transform?.parent;
                 while (current)
                 {
-                    if (_manager.TryGet(current, out var handler) && handler.IsValid())
+                    if (manager.TryGet(current, out var handler) && handler.IsValid())
                         return handler;
                     current = current.parent;
                 }
@@ -28,47 +28,47 @@ namespace Cubeage
         {
             get
             {
-                var parent = _transform.parent;
+                var parent = transform.parent;
                 for (var i = 0; i < parent.childCount; i++)
                 {
                     var child = parent.GetChild(i);
-                    if (Equals(child, _transform))
+                    if (Equals(child, transform))
                         continue;
-                    if (_manager.TryGet(child, out var handler) && handler.IsValid())
+                    if (manager.TryGet(child, out var handler) && handler.IsValid())
                         yield return handler;
                 }
             }
         }
 
-        public IEnumerable<TransformHandler> Children => GetChildren(_transform);
+        public IEnumerable<TransformHandler> Children => GetChildren(transform);
 
         [SerializeField]
-        private bool _isExpanded = false;
+        private bool isExpanded;
         public bool IsExpanded
         {
-            get => _isExpanded;
+            get => isExpanded;
             set
             {
-                if (Equals(_isExpanded, value))
+                if (Equals(isExpanded, value))
                     return;
 
-                _isExpanded = value;
+                isExpanded = value;
             }
         }
 
         [SerializeField]
         [SerializeReference]
-        protected Transform _transform;
+        protected Transform transform;
         public Transform Transform
         {
-            get => _transform;
+            get => transform;
             set
             {
-                if (Equals(_transform, value))
+                if (Equals(transform, value))
                     return;
 
-                _transform = value;
-                _data = new TransformData
+                transform = value;
+                data = new TransformData
                 {
                     localPosition = value.localPosition,
                     localEulerAngles = value.localEulerAngles,
@@ -81,26 +81,26 @@ namespace Cubeage
         }
 
         [SerializeField]
-        protected TransformData _data;
-        public TransformData Data => _data;
+        protected TransformData data;
+        public TransformData Data => data;
 
         [SerializeField]
         [SerializeReference]
-        protected List<TransformController> _boneControllers = new List<TransformController>();
-        public List<TransformController> BoneControllers => _boneControllers.ToList();
+        protected List<TransformController> boneControllers = new List<TransformController>();
+        public List<TransformController> BoneControllers => boneControllers.ToList();
 
-        public string Name => _transform?.name;
+        public string Name => transform?.name;
 
         #region Virtual Hierarchy
         [SerializeField]
         [SerializeReference]
-        protected TransformHandler _virtualParent;
+        protected TransformHandler virtualParent;
         public TransformHandler VirtualParent
         {
-            get => _virtualParent != null && _virtualParent.IsValid() ? _virtualParent : null;
+            get => virtualParent != null && virtualParent.IsValid() ? virtualParent : null;
             set
             {
-                if (Equals(_virtualParent, value))
+                if (Equals(virtualParent, value))
                     return;
 
                 if (Equals(this, value))
@@ -114,24 +114,24 @@ namespace Cubeage
                     parent = parent.VirtualParent;
                 }
 
-                _virtualParent = value;
+                virtualParent = value;
                 Update();
             }
         }
 
-        public IEnumerable<TransformHandler> VirtualChildren => _manager.Handlers.Where(x => Equals(x.VirtualParent, this));
+        public IEnumerable<TransformHandler> VirtualChildren => manager.Handlers.Where(x => Equals(x.VirtualParent, this));
         #endregion
 
         [SerializeField]
         [SerializeReference]
-        protected TransformManager _manager;
+        protected TransformManager manager;
 
-        IEnumerable<TransformHandler> GetChildren(Transform transform)
+        private IEnumerable<TransformHandler> GetChildren(Transform transform)
         {
             for (var i = 0; i < transform.childCount; i++)
             {
                 var child = transform.GetChild(i);
-                if (_manager.TryGet(child, out var handler) && handler.IsValid())
+                if (manager.TryGet(child, out var handler) && handler.IsValid())
                     yield return handler;
                 else
                     foreach(var x in GetChildren(child))
@@ -141,7 +141,7 @@ namespace Cubeage
 
         public TransformHandler(TransformManager manager, Transform transform)
         {
-            _manager = manager;
+            this.manager = manager;
             Transform = transform;
         }
 
@@ -183,28 +183,28 @@ namespace Cubeage
 
         public void RemoveTransformController(TransformController controller)
         {
-            _boneControllers.Remove(controller);
+            boneControllers.Remove(controller);
             Update(controller, UpdateHints.ToggledEnable);
         }
 
         public void AddTransformController(TransformController controller)
         {
-            if (_boneControllers.Contains(controller))
+            if (boneControllers.Contains(controller))
                 throw new Exception("Duplicated bone controller.");
-            _boneControllers.Add(controller);
+            boneControllers.Add(controller);
             Update(controller, UpdateHints.ToggledEnable);
         }
 
         public void SetVirtualParent(Transform transform)
         {
-            if (!_manager.TryGet(transform, out var handler))
+            if (!manager.TryGet(transform, out var handler))
                 throw new Exception("Not a valid parent.");
             VirtualParent = handler;
         }
 
         public void AddVirtualChild(Transform transform)
         {
-            if (!_manager.TryGet(transform, out var handler))
+            if (!manager.TryGet(transform, out var handler))
                 throw new Exception("Not a valid child.");
             Debug.Log(handler.VirtualParent.Transform.name);
             handler.VirtualParent = this;
@@ -213,7 +213,7 @@ namespace Cubeage
 
         public bool IsValid()
         {
-            return _transform;
+            return transform;
         }
 
 
@@ -230,7 +230,7 @@ namespace Cubeage
         public void Update(IEnumerable<TransformController> boneControllers, UpdateHints? hint = null)
         {
             // check which properties should be updated.
-            var targetProperties = boneControllers.Intersect(_boneControllers)
+            var targetProperties = boneControllers.Intersect(this.boneControllers)
                                                   .SelectMany(x => x.Properties.Values)
                                                   .Where(x => hint == UpdateHints.ToggledEnable ? x.IsEnabled : x.IsOverallEnabled)
                                                   .Select(x => x.Property);
@@ -247,7 +247,7 @@ namespace Cubeage
         {
             yield return new TransformUpdate(this, property);
 
-            if ((hint == UpdateHints.UpdatedChange || hint == UpdateHints.ToggledEnable) && _boneControllers.Any(x => !x.TransformChildren) ||
+            if ((hint == UpdateHints.UpdatedChange || hint == UpdateHints.ToggledEnable) && boneControllers.Any(x => !x.TransformChildren) ||
                 hint == UpdateHints.UpdatedTransformChildren)
             {
                 foreach (var child in Children)
@@ -258,7 +258,7 @@ namespace Cubeage
                 }
             }
 
-            if ((hint == UpdateHints.UpdatedChange || hint == UpdateHints.ToggledEnable) && _boneControllers.Any(x => x.TransformChildren) ||
+            if ((hint == UpdateHints.UpdatedChange || hint == UpdateHints.ToggledEnable) && boneControllers.Any(x => x.TransformChildren) ||
                 hint == UpdateHints.UpdatedTransformChildren)
             {
                 foreach (var child in this.GatherMany(x => x.VirtualChildren))
@@ -270,11 +270,11 @@ namespace Cubeage
             }
         }
 
-        static void Update(IEnumerable<TransformUpdate> requests)
+        private static void Update(IEnumerable<TransformUpdate> requests)
         {
             foreach(var request in requests.Distinct())
             {
-                request.handler.Update(request.type);
+                request.Handler.Update(request.Type);
             }
         }
 
@@ -284,11 +284,11 @@ namespace Cubeage
                 return;
 
             Vector3 value = GetValue(type);
-            if (!Equals(_transform.Get(type), value))
-                _transform.Set(type, value);
+            if (!Equals(transform.Get(type), value))
+                transform.Set(type, value);
         }
 
-        Vector3 GetChange(TransformController controller, TransformType type)
+        private Vector3 GetChange(TransformController controller, TransformType type)
         {
             var change = type == TransformType.Scale ? Vector3.one : Vector3.zero;
             if (controller.Properties[new Property(type, Dimension.X)].IsOverallEnabled)
@@ -300,10 +300,10 @@ namespace Cubeage
             return change;
         }
 
-        Vector3 GetValue(TransformType type)
+        private Vector3 GetValue(TransformType type)
         {
-            var value = _data.Get(type);
-            foreach (var controller in _boneControllers)
+            var value = data.Get(type);
+            foreach (var controller in boneControllers)
             {
                 var change = GetChange(controller, type);
                 value = Change(type, value, change);
@@ -311,14 +311,14 @@ namespace Cubeage
 
             var virtualParents = this.Gather(x => x.VirtualParent);
             var parents = this.Gather(x => x.Parent);
-            foreach (var controller in virtualParents.Except(parents).SelectMany(x => x._boneControllers).Where(x => x.TransformChildren))
+            foreach (var controller in virtualParents.Except(parents).SelectMany(x => x.boneControllers).Where(x => x.TransformChildren))
             {
                 var change = GetChange(controller, type);
                 value = Change(type, value, change);
 
                 if (type == TransformType.Position)
                 {
-                    var relativePosition = GetRelativePosition(controller.Handler._data.position, controller.Handler._data.rotation, _data.position);
+                    var relativePosition = GetRelativePosition(controller.Handler.data.position, controller.Handler.data.rotation, data.position);
                     var scaleChange = GetChange(controller, TransformType.Scale);
 
                     // Handle Scale
@@ -341,14 +341,14 @@ namespace Cubeage
             {
                 if (!virtualParents.Where(x => x.BoneControllers.Any(y => y.TransformChildren)).Contains(Parent))
                 {
-                    foreach (var controller in Parent._boneControllers)
+                    foreach (var controller in Parent.boneControllers)
                     {
                         var change = GetChange(controller, type);
                         value = CounterChange(type, value, change);
 
                         if (type == TransformType.Position)
                         {
-                            var relativePosition = GetRelativePosition(controller.Handler._data.position, controller.Handler._data.rotation, _data.position);
+                            var relativePosition = GetRelativePosition(controller.Handler.data.position, controller.Handler.data.rotation, data.position);
                             var scaleChange = GetChange(controller, TransformType.Scale);
 
                             // Handle Scale
@@ -380,8 +380,8 @@ namespace Cubeage
 
             return value;
         }
-        
-        static Vector3 Rotate(Vector3 vector, Vector3 angles)
+
+        private static Vector3 Rotate(Vector3 vector, Vector3 angles)
         {
             vector = RotateX(vector, angles.x);
             vector = RotateY(vector, angles.y);
@@ -424,7 +424,7 @@ namespace Cubeage
             return result;
         }
 
-        float GetCounterChange(TransformType type, float change)
+        private float GetCounterChange(TransformType type, float change)
         {
             switch (type)
             {
@@ -438,7 +438,7 @@ namespace Cubeage
             }
         }
 
-        Vector3 Change(TransformType type, Vector3 value, Vector3 change)
+        private Vector3 Change(TransformType type, Vector3 value, Vector3 change)
         {
             switch (type)
             {
@@ -453,7 +453,7 @@ namespace Cubeage
             }
         }
 
-        Vector3 CounterChange(TransformType type, Vector3 value, Vector3 change)
+        private Vector3 CounterChange(TransformType type, Vector3 value, Vector3 change)
         {
             switch (type)
             {
@@ -473,15 +473,15 @@ namespace Cubeage
         public bool TryGetTargetTransform(out Transform target)
         {
             target = null;
-            if (Equals(_transform.parent.name + _manager.Suffix, _transform.name))
+            if (Equals(transform.parent.name + manager.Suffix, transform.name))
             {
-                target = _transform.parent;
+                target = transform.parent;
                 return true;
             }
-            for (var i = 0; i < _transform.childCount; i++)
+            for (var i = 0; i < transform.childCount; i++)
             {
-                var child = _transform.GetChild(i);
-                if (Equals(child.name + _manager.Suffix, _transform.name))
+                var child = transform.GetChild(i);
+                if (Equals(child.name + manager.Suffix, transform.name))
                 {
                     target = child;
                     return true;

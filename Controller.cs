@@ -11,103 +11,108 @@ namespace Cubeage
     {
         [SerializeField]
         [SerializeReference]
-        protected AvatarController _avatarController;
-        public AvatarController AvatarController => _avatarController;
+        protected AvatarController avatarController;
+        public AvatarController AvatarController => avatarController;
 
         [SerializeField]
-        private  string _name = "";
+        private  string name;
         public string Name
         {
-            get => _name;
+            get => name;
             set
             {
-                if (Equals(_name, value))
+                if (Equals(name, value))
                     return;
 
-                _name = value;
+                name = value;
             }
         }
         [SerializeReference] 
         [SerializeField]
-        protected List<TransformController> _boneControllers = new List<TransformController>();
-        public List<TransformController> BoneControllers => _boneControllers.ToList();
+        protected List<TransformController> boneControllers = new List<TransformController>();
+        public List<TransformController> BoneControllers => boneControllers.ToList();
 
         [SerializeField]
-        protected float _defaultValue = 50;
+        protected float defaultValue = 50;
         public float DefaultValue {
-            get => _defaultValue;
+            get => defaultValue;
             set
             {
-                if (Equals(_defaultValue, value))
+                if (Equals(defaultValue, value))
                     return;
 
-                _defaultValue = value;
+                defaultValue = value;
             }
         }
 
         [SerializeField]
-        private bool _isEnabled = true;
+        private bool isEnabled = true;
 
         public bool IsEnabled
         {
-            get => _isEnabled;
+            get => isEnabled;
             set
             {
-                if (Equals(_isEnabled, value))
+                if (Equals(isEnabled, value))
                     return;
 
-                _isEnabled = value;
-                _avatarController.Manager.Update(_boneControllers, UpdateHints.ToggledEnable);
+                isEnabled = value;
+                avatarController.Manager.Update(boneControllers, UpdateHints.ToggledEnable);
             }
         }
 
 
         [SerializeField]
-        private float _value = 50;
+        private float value = 50;
 
         [SerializeField]
-        private Mode _mode = Mode.View;
+        private Mode mode = Mode.View;
 
         [SerializeField]
-        private bool _isExpanded = false;
+        private bool isExpanded;
         public bool IsExpanded
         {
-            get => _isExpanded;
+            get => isExpanded;
             set
             {
-                if (Equals(_isExpanded, value))
+                if (Equals(isExpanded, value))
                     return;
 
-                _isExpanded = value;
+                isExpanded = value;
             }
         }
 
         public float Value
         {
-            get => _value;
+            get => value;
             set
             {
-                if (Equals(_value, value))
+                if (Equals(this.value, value))
                     return;
                 
-                _value = value;
+                this.value = value;
 
-                if (_value == 100)
-                    Mode = Mode.Max;
-                else if (_value == 0)
-                    Mode = Mode.Min;
-                else
-                    Mode = Mode.View;
-
-                _avatarController.Manager.Update(_boneControllers, UpdateHints.UpdatedChange);
+                switch (this.value)
+                {
+                    case 100:
+                        Mode = Mode.Max;
+                        break;
+                    case 0:
+                        Mode = Mode.Min;
+                        break;
+                    default:
+                        Mode = Mode.View;
+                        break;
+                }
+                avatarController.Manager.Update(boneControllers, UpdateHints.UpdatedChange);
             }
         }
 
         public Mode Mode { 
-            get => _mode; 
+            get => mode; 
             set
             {
-                if (Equals(_mode, value))
+                if (Equals(mode, value))
                     return;
 
                 switch (value)
@@ -118,21 +123,25 @@ namespace Cubeage
                     case Mode.Min:
                         Value = 0;
                         break;
+                    case Mode.View:
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(value), value, null);
                 }
-                _mode = value;
+                mode = value;
             } 
         }
 
         public Controller(AvatarController avatarController, string name)
         {
-            _avatarController = avatarController;
-            _name = name;
+            this.avatarController = avatarController;
+            this.name = name;
         }
 
         public void Add(Transform transform)
         {
-            var handler = _avatarController.Manager.Get(transform);
-            _boneControllers.Add(handler.CreateTransformController(this));
+            var handler = avatarController.Manager.Get(transform);
+            boneControllers.Add(handler.CreateTransformController(this));
         }
 
         public void Remove(TransformController controller)
@@ -140,7 +149,7 @@ namespace Cubeage
             controller.IsEnabled = false;
 
             controller.Handler.RemoveTransformController(controller);
-            _boneControllers.Remove(controller);
+            boneControllers.Remove(controller);
         }
 
         public void SetDefault()

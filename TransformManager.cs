@@ -10,51 +10,51 @@ namespace Cubeage
     public class TransformManager
     {
         [SerializeField]
-        protected string _suffix;
-        public string Suffix => _suffix;
+        protected string suffix;
+        public string Suffix => suffix;
 
         [SerializeField]
-        private bool _isExpanded = false;
+        private bool isExpanded;
         public bool IsExpanded
         {
-            get => _isExpanded;
+            get => isExpanded;
             set
             {
-                if (Equals(_isExpanded, value))
+                if (Equals(isExpanded, value))
                     return;
 
-                _isExpanded = value;
+                isExpanded = value;
             }
         }
         
         [SerializeReference]
         [SerializeField]
-        protected Transform _root;
+        protected Transform root;
         public Transform Root {
-            get => _root;
+            get => root;
             set
             {
-                if (Equals(_root, value))
+                if (Equals(root, value))
                     return;
 
-                _root = value;
+                root = value;
                 Reload();
             }
         }
 
         [SerializeReference]
         [SerializeField]
-        protected List<TransformHandler> _handlers = new List<TransformHandler>();
-        public List<TransformHandler> Handlers => _handlers.ToList();
+        protected List<TransformHandler> handlers = new List<TransformHandler>();
+        public List<TransformHandler> Handlers => handlers.ToList();
 
         public TransformManager(string suffix = "_ctrl")
         {
-            _suffix = suffix;
+            this.suffix = suffix;
         }
 
         public bool IsValid(Transform transform)
         {
-            return transform.name.EndsWith(_suffix);
+            return transform.name.EndsWith(suffix);
         }
 
         public TransformHandler Get(Transform transform)
@@ -70,21 +70,21 @@ namespace Cubeage
 
         public bool TryGet(Transform transform, out TransformHandler handler)
         {
-            handler = _handlers.FirstOrDefault(x => Equals(transform, x.Transform));
+            handler = handlers.FirstOrDefault(x => Equals(transform, x.Transform));
             return handler != null;
         }
 
 
         public void Reload()
         {
-            var transforms = _root.GetComponentsInChildren<Transform>().Where(x => IsValid(x));
+            var transforms = root.GetComponentsInChildren<Transform>().Where(x => IsValid(x));
 
             // Remove invalid handlers
-            foreach (var handler in _handlers.ToArray())
+            foreach (var handler in handlers.ToArray())
             {
                 if (!handler.IsValid() || !transforms.Contains(handler.Transform))
                 {
-                    _handlers.Remove(handler);
+                    handlers.Remove(handler);
                 }
             }
 
@@ -95,7 +95,7 @@ namespace Cubeage
                 if (!TryGet(transform, out _))
                 {
                     var handler = new TransformHandler(this, transform);
-                    _handlers.Add(handler);
+                    handlers.Add(handler);
                     newHandlers.Add(handler);
                 }
             }
@@ -108,7 +108,7 @@ namespace Cubeage
 
         public void Update()
         {
-            foreach (var handler in _handlers)
+            foreach (var handler in handlers)
             {
                 handler.Update();
             }
@@ -118,7 +118,7 @@ namespace Cubeage
         {
             if (hint == UpdateHints.UpdatedChange)
                 boneControllers = boneControllers.Where(x => x.IsEnabled);
-            foreach (var handler in _handlers.Where(x => x.BoneControllers.Intersect(boneControllers).Any()))
+            foreach (var handler in handlers.Where(x => x.BoneControllers.Intersect(boneControllers).Any()))
             {
                 handler.Update(boneControllers, hint);
             }
@@ -126,7 +126,7 @@ namespace Cubeage
 
         public void AutoSetParent()
         { 
-            foreach (var handler in _handlers)
+            foreach (var handler in handlers)
             {
                 AutoSetParent(handler);
             }
@@ -142,7 +142,7 @@ namespace Cubeage
         }
         public bool TryGetHandler(Transform transform, out TransformHandler handler)
         {
-            handler = _handlers.FirstOrDefault(x => x.TryGetTargetTransform(out var target) && target == transform);
+            handler = handlers.FirstOrDefault(x => x.TryGetTargetTransform(out var target) && target == transform);
             return handler != null;
         }
     }

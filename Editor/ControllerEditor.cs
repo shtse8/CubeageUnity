@@ -9,14 +9,14 @@ namespace Cubeage.Avatar.Editor
     [CustomEditor(typeof(AvatarController))]
     public class ControllerEditor : UnityEditor.Editor
     {
-        AvatarController _avatarController;
+        private AvatarController _avatarController;
 
-        void OnEnable()
+        private void OnEnable()
         {
             _avatarController = (AvatarController)target;
         }
 
-        bool DrawRemoveButton()
+        private bool DrawRemoveButton()
         {
             return GUILayout.Button("x", new GUIStyle(GUI.skin.label)
             {
@@ -28,17 +28,17 @@ namespace Cubeage.Avatar.Editor
             }) && ConfirmRemove();
         }
 
-        void RecordUndo(string name)
+        private void RecordUndo(string name)
         {
             Undo.RecordObjects(_avatarController.Manager.Handlers.Where(x => x.IsValid()).Select(x => x.Transform).Cast<UnityEngine.Object>().Prepend(_avatarController).ToArray(), name);
         }
 
-        bool ConfirmRemove()
+        private bool ConfirmRemove()
         {
             return Confirm("Are you sure want to remove?");
         }
 
-        void DrawHierarchy(TransformHandler handler = null)
+        private void DrawHierarchy(TransformHandler handler = null)
         {
             var handlers = handler?.VirtualChildren ?? _avatarController.Manager.Handlers.Where(x => x.VirtualParent == null);
             if (handlers.Count() > 0)
@@ -359,17 +359,17 @@ namespace Cubeage.Avatar.Editor
         }
 
 
-        bool Confirm(string message)
+        private bool Confirm(string message)
         {
             return EditorUtility.DisplayDialog("Controller @ Cubeage", message, "Yes", "No");
         }
 
-        void Alert(string message)
+        private void Alert(string message)
         {
             EditorUtility.DisplayDialog("Controller @ Cubeage", message, "Okay");
         }
 
-        void DrawTransformController(TransformController bone, Property property, Controller boneController)
+        private void DrawTransformController(TransformController bone, Property property, Controller boneController)
         {
             var entry = bone.Properties[property];
             using (Layout.SetEnable(entry.IsEnabled || bone.IsAvailable(property)))

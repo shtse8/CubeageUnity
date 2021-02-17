@@ -4,16 +4,16 @@ namespace Cubeage
 {
     public class Disposable : IDisposable
     {
-        readonly Action Action;
+        private readonly Action _action;
 
         public Disposable(Action action)
         {
-            Action = action;
+            _action = action;
         }
 
         public void Dispose()
         {
-            Action();
+            _action();
         }
 
         public static IDisposable Create(Action action)

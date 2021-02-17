@@ -12,13 +12,13 @@ namespace Cubeage
         public IKController[] controllers;
 
         // Start is called before the first frame update
-        void Start()
+        private void Start()
         {
             animator = gameObject.GetComponent<Animator>();
         }
 
         // Update is called once per frame
-        void Update()
+        private void Update()
         {
             animator.Update(0);
         }

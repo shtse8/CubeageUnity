@@ -8,17 +8,17 @@ namespace Cubeage
     public struct Property
     {
         [SerializeField]
-        private TransformType _type;
-        public TransformType Type => _type;
+        private TransformType type;
+        public TransformType Type => type;
 
         [SerializeField]
-        private Dimension _dimension;
-        public Dimension Dimension => _dimension;
+        private Dimension dimension;
+        public Dimension Dimension => dimension;
 
         public Property(TransformType type, Dimension dimension)
         {
-            _type = type;
-            _dimension = dimension;
+            this.type = type;
+            this.dimension = dimension;
         }
 
         public static explicit operator Property(Tuple<TransformType, Dimension> tuple)
@@ -26,7 +26,7 @@ namespace Cubeage
             return new Property(tuple.Item1, tuple.Item2);
         }
 
-        public override string ToString() => $"{_type}{_dimension}";
+        public override string ToString() => $"{type}{dimension}";
 
         public static IEnumerable<Property> GetAll()
         {

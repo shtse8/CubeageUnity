@@ -96,19 +96,19 @@ namespace Cubeage
 
         }
 
-		void Start()
+        private void Start()
 		{
 			StartCoroutine(nameof(RandomChange));
 		}
 
-		void Blink()
+        private void Blink()
 		{
 			_leftEyeBlinkController = new EyeBlinkController(upperLeftEyeLip, lowerLeftEyeLip, ratio);
 			_rightEyeBlinkController = new EyeBlinkController(upperRightEyeLip, lowerRightEyeLip, ratio);
 			_timeRemining = duration;
 		}
 
-		void Update()
+        private void Update()
 		{
 			if (_timeRemining <= 0)
 				return;
