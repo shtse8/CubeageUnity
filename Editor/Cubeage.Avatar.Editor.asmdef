@@ -1,0 +1,17 @@
+{
+    "name": "Cubeage.Avatar.Editor",
+    "references": [
+        "GUID:4c3daf26e94e6d147b7cfcfae64a9113"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
